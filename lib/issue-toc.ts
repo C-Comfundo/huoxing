@@ -38,6 +38,10 @@ function toText(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+function isDrawingSection(displayName: string) {
+  return displayName.includes("画里有话") || displayName.includes("画里话外");
+}
+
 /**
  * Fetch the full table of contents for an issue.
  * RLS ensures only published-issue data is returned.
@@ -114,7 +118,7 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
     const sectionRow = (sectionRows as RawSectionRow[]).find(s => s.id === sectionId);
     const displayName = sectionRow ? toText(sectionRow.display_name) : "";
     
-    if (displayName.includes("漫画") || displayName.includes("画里有话")) {
+    if (isDrawingSection(displayName)) {
       customHref = issueSlug ? `/issues/${issueSlug}/drawing` : "/drawing";
     } else if (displayName.includes("辩题") || displayName.includes("以辩会友")) {
       customHref = issueSlug ? `/issues/${issueSlug}/debate` : "/debate";
@@ -140,7 +144,7 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
     const displayName = toText(row.display_name);
     
     let customHref: string | undefined;
-    if (displayName.includes("漫画") || displayName.includes("画里有话")) {
+    if (isDrawingSection(displayName)) {
       customHref = issueSlug ? `/issues/${issueSlug}/drawing` : "/drawing";
     } else if (displayName.includes("辩题") || displayName.includes("以辩会友")) {
       customHref = issueSlug ? `/issues/${issueSlug}/debate` : "/debate";

@@ -153,7 +153,7 @@ export default async function IssueDetailPage({ params }: PageProps) {
       id: `drawing-${drawing.id}`,
       slug: `drawing-${drawing.id}`,
       title: drawing.title,
-      excerpt: drawing.description ?? "画里话外，点击查看漫画。",
+      excerpt: drawing.description ?? "画里话外，点击查看画作。",
       content: "",
       author: drawingCardAuthor,
       category: "画里话外",

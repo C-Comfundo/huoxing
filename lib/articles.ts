@@ -126,7 +126,7 @@ const ISSUE_PAGE_CATEGORY_HEADINGS: Record<string, IssuePageCategoryHeading> = {
   三行两句: { title: "三行两句", subtitle: "诗歌" },
   见字如面: { title: "见字如面", subtitle: "书信" },
   画里有话: { title: "画里有话", subtitle: "漫画" },
-  画里话外: { title: "画里话外", subtitle: "漫画" },
+  画里话外: { title: "画里话外", subtitle: "画作" },
 };
 
 export function getIssuePageCategoryHeadingParts(category: string): IssuePageCategoryHeading {
