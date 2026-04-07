@@ -140,18 +140,22 @@ export default async function IssueDetailPage({ params }: PageProps) {
     getIssueDrawingByIssueId(issue.id),
   ]);
 
+  // Inject drawing as a pseudo-article card at the end of the list.
   const allArticles: Article[] = [...articles];
 
   if (drawing) {
+    const drawingCardAuthor =
+      drawing.authorName?.trim() ||
+      drawing.authorHandle?.trim() ||
+      "星火编辑部";
+
     allArticles.push({
       id: `drawing-${drawing.id}`,
       slug: `drawing-${drawing.id}`,
       title: drawing.title,
       excerpt: drawing.description ?? "画里话外，点击查看漫画。",
       content: "",
-      author: drawing.authorHandle
-        ? `小红书ID：${drawing.authorHandle}`
-        : (drawing.authorName ?? "星火编辑部"),
+      author: drawingCardAuthor,
       category: "画里话外",
       publishedAt: drawing.createdAt ?? new Date().toISOString(),
       viewCount: drawing.viewCount,
