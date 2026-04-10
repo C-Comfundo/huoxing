@@ -241,32 +241,10 @@ export default function SettingsPage() {
                   {getInitial(displayName)}
                 </div>
               )}
-              
-              {/* 上传按钮遮罩 */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
-              >
-                {uploading ? (
-                  <Loader2 className="w-6 h-6 text-white animate-spin" />
-                ) : (
-                  <Camera className="w-6 h-6 text-white" />
-                )}
-              </button>
-              
-              {/* 隐藏的文件输入 */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden"
-              />
             </div>
             
-            <p className="mt-3 text-sm text-[#8D8D8D] font-youyou">
-              点击头像更换（支持 JPG、PNG，最大 2MB）
+            <p className="mt-4 text-sm text-[#8D8D8D] font-youyou">
+              头像上传功能正在升级中，暂不可用
             </p>
           </div>
 

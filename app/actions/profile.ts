@@ -36,7 +36,9 @@ export async function updateProfile(data: UpdateProfileData): Promise<ActionResu
       }
     }
 
-    const updateData: Record<string, string> = {}
+    const updateData: Record<string, string> = {
+      id: user.id
+    }
     
     if (data.displayName !== undefined) {
       updateData.display_name = data.displayName
@@ -60,8 +62,7 @@ export async function updateProfile(data: UpdateProfileData): Promise<ActionResu
     
     const { error } = await adminClient
       .from('profiles')
-      .update(updateData)
-      .eq('id', user.id)
+      .upsert(updateData)
 
     if (error) {
       console.error('[updateProfile] 更新失败:', error)
