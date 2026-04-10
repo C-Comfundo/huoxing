@@ -200,10 +200,11 @@ export default function SubmissionForm() {
                   <button
                     type="button"
                     onClick={clearFile}
-                    className={`ml-2 inline-flex h-4 w-4 items-center justify-center rounded-full text-[#8D8178] transition-opacity duration-150 hover:text-[#3A3A3A] focus:outline-none ${showFileRemoveButton
-                      ? "opacity-100 pointer-events-auto"
-                      : "opacity-0 pointer-events-none"
-                      }`}
+                    className={`ml-2 inline-flex h-4 w-4 items-center justify-center rounded-full text-[#8D8178] transition-opacity duration-150 hover:text-[#3A3A3A] focus:outline-none ${
+                      showFileRemoveButton
+                        ? "opacity-100 pointer-events-auto"
+                        : "opacity-0 pointer-events-none"
+                    }`}
                     aria-label="删除已选择文件"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -228,10 +229,11 @@ export default function SubmissionForm() {
 
         {message && !showSuccessModal ? (
           <div
-            className={`rounded-xl border px-4 py-3 text-sm font-youyou ${isError
-              ? "border-red-100 bg-red-50 text-red-600"
-              : "border-green-100 bg-green-50 text-green-600"
-              }`}
+            className={`rounded-xl border px-4 py-3 text-sm font-youyou ${
+              isError
+                ? "border-red-100 bg-red-50 text-red-600"
+                : "border-green-100 bg-green-50 text-green-600"
+            }`}
           >
             {message}
           </div>
@@ -247,10 +249,10 @@ export default function SubmissionForm() {
         </button>
       </form>
 
-      <SuccessLetterModal
-        isOpen={showSuccessModal}
-        onClose={handleCloseModal}
-        content={SUCCESS_MODAL_CONTENT}
+      <SuccessLetterModal 
+        isOpen={showSuccessModal} 
+        onClose={handleCloseModal} 
+        content={SUCCESS_MODAL_CONTENT} 
       />
     </>
   );

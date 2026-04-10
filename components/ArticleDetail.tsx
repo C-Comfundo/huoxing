@@ -1,12 +1,27 @@
 import Link from "next/link";
+
 import { notFound } from "next/navigation";
+
 import { ArrowLeft, BookOpen } from "lucide-react";
+
 import Navbar from "@/components/Navbar";
+
 import EchoSection from "@/components/EchoSection";
+
+import FavoriteButton from "@/components/FavoriteButton";
+
 import IssueBadge from "@/components/IssueBadge";
+
 import ViewTracker from "@/components/ViewTracker";
+
 import { fetchEchoes } from "@/app/actions/echoes";
+
+import { getFavoriteStatus } from "@/app/actions/favorites";
+
+import { getEchoLikeStatuses } from "@/app/actions/likes";
+
 import { getArticleBySlug, getIssueHref } from "@/lib/articles";
+
 import { createClient } from "@/lib/supabase/server";
 
 interface ArticleDetailProps {
@@ -18,11 +33,9 @@ interface ArticleDetailProps {
 
 function formatDate(input: string): string {
   const date = new Date(input);
-
   if (Number.isNaN(date.getTime())) {
     return input;
   }
-
   return new Intl.DateTimeFormat("zh-CN", {
     year: "numeric",
     month: "2-digit",
@@ -35,7 +48,7 @@ function hasHtmlTags(input: string): boolean {
 }
 
 function normalizePlainText(input: string): string {
-  return input.replace(/\r\n/g, "\n");
+  return input.replace(/\n/g, "\n");
 }
 
 export default async function ArticleDetail({
@@ -54,7 +67,16 @@ export default async function ArticleDetail({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   const echoes = await fetchEchoes(article.id);
+
+  const userId = user?.id ?? null;
+
+  const [{ favorited }, likeStatuses] = await Promise.all([
+    user ? getFavoriteStatus(article.id) : Promise.resolve({ favorited: false }),
+    getEchoLikeStatuses(echoes.map((e) => e.id), userId),
+  ]);
+
   const category = article.category || fallbackCategory;
   const plainTextContent = normalizePlainText(article.content);
   const shouldUseHtml = hasHtmlTags(article.content);
@@ -68,7 +90,6 @@ export default async function ArticleDetail({
         endpoint={`/api/articles/${article.id}/view`}
         storageKey={`viewed:article:${article.id}`}
       />
-
       <article className="mx-auto max-w-3xl animate-fade-in px-4 pb-24 pt-24 md:pt-32 md:px-8">
         <Link
           href={resolvedBackHref}
@@ -98,6 +119,7 @@ export default async function ArticleDetail({
               <BookOpen className="h-4 w-4 opacity-60" aria-hidden="true" />
               <span>{article.viewCount}</span>
             </span>
+            <FavoriteButton articleId={article.id} initialFavorited={favorited} />
           </div>
         </header>
 
@@ -127,7 +149,12 @@ export default async function ArticleDetail({
           </div>
         ) : null}
 
-        <EchoSection articleId={article.id} isLoggedIn={Boolean(user)} initialEchoes={echoes} />
+        <EchoSection
+          articleId={article.id}
+          isLoggedIn={Boolean(user)}
+          initialEchoes={echoes}
+          initialLikeStatuses={likeStatuses}
+        />
 
         <div className="mt-16 border-t border-[#D7CCC8]/30 pt-10 text-center">
           <div className="mx-auto mb-6 flex h-8 w-8 items-center justify-center rounded-full bg-[#EFEBE9]">

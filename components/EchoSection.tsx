@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MessageSquare } from "lucide-react";
+
+import { Heart, MessageSquare } from "lucide-react";
+
 import { submitEcho, type Echo } from "@/app/actions/echoes";
+
+import { toggleEchoLike } from "@/app/actions/likes";
 
 interface EchoSectionProps {
   articleId: string;
   isLoggedIn: boolean;
   initialEchoes: Echo[];
+  initialLikeStatuses: Record<string, { count: number; liked: boolean }>;
 }
 
 function formatDate(input: string): string {
@@ -26,8 +31,10 @@ export default function EchoSection({
   articleId,
   isLoggedIn,
   initialEchoes,
+  initialLikeStatuses,
 }: EchoSectionProps) {
   const [echoes, setEchoes] = useState(initialEchoes);
+  const [likeStatuses, setLikeStatuses] = useState(initialLikeStatuses);
   const [content, setContent] = useState("");
   const [message, setMessage] = useState("");
   const [anonymous, setAnonymous] = useState(false);
@@ -39,25 +46,42 @@ export default function EchoSection({
       setMessage("请写下回音内容后再发布");
       return;
     }
-
     setMessage("");
-
     startTransition(async () => {
       const result = await submitEcho({
         articleId,
         content: trimmed,
         isAnonymous: anonymous,
       });
-
       if (!result.success || !result.echo) {
         setMessage(result.message);
         return;
       }
-
       setEchoes((prev) => [...prev, result.echo!]);
       setContent("");
       setAnonymous(false);
       setMessage(result.message);
+    });
+  };
+
+  const handleLike = (echoId: string) => {
+    if (!isLoggedIn) {
+      alert("请先登录后再点赞");
+      return;
+    }
+    startTransition(async () => {
+      const result = await toggleEchoLike(echoId);
+      if (result.success && result.liked !== undefined) {
+        setLikeStatuses((prev) => ({
+          ...prev,
+          [echoId]: {
+            count: result.liked
+              ? (prev[echoId]?.count ?? 0) + 1
+              : (prev[echoId]?.count ?? 1) - 1,
+            liked: result.liked!,
+          },
+        }));
+      }
     });
   };
 
@@ -98,16 +122,14 @@ export default function EchoSection({
                   aria-label="匿名发布"
                   disabled={isPending}
                   onClick={() => setAnonymous((v) => !v)}
-                  className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A1887F]/50 disabled:opacity-50 ${
-                    anonymous
+                  className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A1887F]/50 disabled:opacity-50 ${anonymous
                       ? "border-[#A1887F] bg-[#A1887F]"
-                      : "border-[#D7CCC8] bg-[#E8E4DF]"
-                  }`}
+                      : "border-[#D7CCC8] bg-white"
+                    }`}
                 >
                   <span
-                    className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all duration-200 ${
-                      anonymous ? "left-auto right-0.5" : "left-0.5 right-auto"
-                    }`}
+                    className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all duration-200 ${anonymous ? "left-5" : "left-0.5"
+                      }`}
                   />
                 </button>
               </div>
@@ -136,21 +158,40 @@ export default function EchoSection({
           echoes.map((echo, index) => (
             <article
               key={echo.id}
-              className={`rounded-sm border p-5 ${
-                index % 3 === 0
-                  ? "border-[#E6DDD5] bg-[#F4EFEA]"
+              className={`rounded-sm border p-5 ${index % 3 === 0
+                  ? "border-[#E8E0D8] bg-[#FDFCF9]"
                   : index % 3 === 1
-                    ? "border-[#DDE3DA] bg-[#EEF1ED]"
-                    : "border-[#DCE0E8] bg-[#EEF0F4]"
-              }`}
+                    ? "border-[#E3DDD8] bg-[#FAF8F5]"
+                    : "border-[#DDD6CE] bg-[#F7F5F0]"
+                }`}
             >
               <div className="mb-3 flex items-center justify-between text-xs text-[#9E9E9E]">
                 <span className="text-[#6A6A6A]">{echo.authorLabel}</span>
                 <span>{formatDate(echo.createdAt)}</span>
               </div>
+
               <p className="whitespace-pre-wrap font-serif text-[15px] leading-7 text-[#3A3A3A]">
                 {echo.content}
               </p>
+
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={() => handleLike(echo.id)}
+                  disabled={isPending}
+                  aria-label={
+                    likeStatuses[echo.id]?.liked ? "取消点赞" : "点赞"
+                  }
+                  className="inline-flex items-center gap-1.5 text-xs text-[#9E9E9E] transition-colors hover:text-[#A1887F] disabled:opacity-50"
+                >
+                  <Heart
+                    className={`h-3.5 w-3.5 transition-all duration-200 ${likeStatuses[echo.id]?.liked
+                        ? "fill-[#A1887F] text-[#A1887F]"
+                        : "fill-none"
+                      }`}
+                  />
+                  <span>{likeStatuses[echo.id]?.count ?? 0}</span>
+                </button>
+              </div>
             </article>
           ))
         )}
