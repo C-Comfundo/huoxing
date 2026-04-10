@@ -276,6 +276,14 @@ export default function Navbar() {
                     </div>
                   </div>
 
+                  <Link
+                    href="/profile"
+                    onClick={closeMobileMenu}
+                    className="text-left text-sm font-youyou text-[#5D5D5D] transition-colors hover:text-[#A1887F]"
+                  >
+                    个人主页
+                  </Link>
+
                   <button
                     onClick={async () => {
                       const { signOut } = await import("@/app/actions/auth");

@@ -157,6 +157,7 @@ export default function EchoSection({
         ) : (
           echoes.map((echo, index) => (
             <article
+              id={`echo-${echo.id}`}
               key={echo.id}
               className={`rounded-sm border p-5 ${index % 3 === 0
                   ? "border-[#E8E0D8] bg-[#FDFCF9]"

@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogOut, ChevronDown } from 'lucide-react'
+import Link from 'next/link'
+import { LogOut, ChevronDown, User } from 'lucide-react'
 import { signOut } from '@/app/actions/auth'
 
 interface UserMenuProps {
@@ -71,8 +72,18 @@ export default function UserMenu({ user, onClose }: UserMenuProps) {
             <p className="text-xs text-[#8D8D8D] truncate">{user.email}</p>
           </div>
 
+          {/* 个人主页 */}
+          <Link
+            href="/profile"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center space-x-3 px-4 py-2.5 text-sm font-youyou text-[#5D5D5D] hover:bg-[#FAF9F6] hover:text-[#A1887F] transition-colors"
+          >
+            <User className="w-4 h-4" />
+            <span>个人主页</span>
+          </Link>
+
           {/* 登出 */}
-          <div className="pt-2">
+          <div className="border-t border-[#E8E4DF] mt-1 pt-1">
             <button
               onClick={handleSignOut}
               className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-youyou text-[#5D5D5D] hover:bg-red-50 hover:text-red-600 transition-colors"
