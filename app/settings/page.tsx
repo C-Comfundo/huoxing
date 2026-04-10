@@ -175,8 +175,8 @@ export default function SettingsPage() {
         avatar_url: avatarUrl,
       })
       setAvatarPreview(null)
-      // 刷新页面以更新导航栏
-      router.refresh()
+      // 重新加载整个页面以更新各处的顶栏缓存
+      window.location.reload()
     } else {
       setMessage(result.message)
       setIsError(true)
