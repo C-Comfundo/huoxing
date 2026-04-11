@@ -14,6 +14,7 @@ import {
   MessageCircle,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { loadCurrentUserProfile } from '@/lib/current-user-profile'
 import {
   getUserFavorites,
   getUserLikedEchoes,
@@ -66,34 +67,16 @@ export default function ProfilePage() {
         return
       }
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const currentUser = await loadCurrentUserProfile(supabase)
+      if (!currentUser) {
         router.push('/login')
         return
       }
 
-      let displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || '用户'
-      let avatarUrl: string | null = null
-
-      try {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url')
-          .eq('id', user.id)
-          .single()
-
-        if (profileData) {
-          if (profileData.display_name) displayName = profileData.display_name
-          avatarUrl = profileData.avatar_url
-        }
-      } catch {
-        // Fall back to auth metadata
-      }
-
       setProfile({
-        displayName,
-        email: user.email || '',
-        avatarUrl,
+        displayName: currentUser.displayName,
+        email: currentUser.email,
+        avatarUrl: currentUser.avatarUrl,
       })
       setLoading(false)
     }

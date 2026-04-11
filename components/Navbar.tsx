@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Archive, Menu, PenLine, PenSquare, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { loadCurrentUserProfile } from "@/lib/current-user-profile";
 import UserMenu from "./UserMenu";
 
 interface UserInfo {
@@ -43,42 +44,17 @@ export default function Navbar() {
 
     const getUser = async () => {
       try {
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
+        const currentUser = await loadCurrentUserProfile(supabase);
 
-        if (!authUser) {
+        if (!currentUser) {
           setUser(null);
           return;
         }
 
-        const fallbackDisplayName =
-          authUser.user_metadata?.display_name ||
-          authUser.email?.split("@")[0] ||
-          "用户";
-
-        let avatarUrl: string | null = null;
-        let profileDisplayName: string | null = null;
-
-        try {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("display_name, avatar_url")
-            .eq("id", authUser.id)
-            .single();
-
-          if (profile) {
-            avatarUrl = profile.avatar_url;
-            profileDisplayName = profile.display_name;
-          }
-        } catch {
-          // Ignore profile lookup failures and fall back to auth metadata.
-        }
-
         setUser({
-          email: authUser.email || "",
-          displayName: profileDisplayName || fallbackDisplayName,
-          avatarUrl,
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          avatarUrl: currentUser.avatarUrl,
         });
       } catch (error) {
         console.error("获取用户信息失败:", error);
@@ -93,22 +69,13 @@ export default function Navbar() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const displayName =
-          session.user.user_metadata?.display_name ||
-          session.user.email?.split("@")[0] ||
-          "用户";
-
-        setUser({
-          email: session.user.email || "",
-          displayName,
-          avatarUrl: null,
-        });
-      } else {
+      if (!session?.user) {
         setUser(null);
+        setLoading(false);
+        return;
       }
 
-      setLoading(false);
+      void getUser();
     });
 
     return () => subscription.unsubscribe();

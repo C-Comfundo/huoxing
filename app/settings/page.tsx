@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Camera, Check, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { loadCurrentUserProfile } from '@/lib/current-user-profile'
 import { updateProfile } from '@/app/actions/profile'
 
 interface Profile {
@@ -40,31 +41,22 @@ export default function SettingsPage() {
         setLoading(false)
         return
       }
-      
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
+
+      const currentUser = await loadCurrentUserProfile(supabase)
+
+      if (!currentUser) {
         router.push('/login')
         return
       }
 
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (profileData) {
-        setProfile({
-          id: user.id,
-          email: user.email || '',
-          display_name: profileData.display_name || user.email?.split('@')[0] || '',
-          avatar_url: profileData.avatar_url,
-        })
-        setDisplayName(profileData.display_name || user.email?.split('@')[0] || '')
-        setAvatarUrl(profileData.avatar_url)
-      }
-      
+      setProfile({
+        id: currentUser.id,
+        email: currentUser.email,
+        display_name: currentUser.displayName,
+        avatar_url: currentUser.avatarUrl,
+      })
+      setDisplayName(currentUser.displayName)
+      setAvatarUrl(currentUser.avatarUrl)
       setLoading(false)
     }
 
@@ -160,6 +152,8 @@ export default function SettingsPage() {
     setSaving(true)
     setMessage('')
 
+    const nextDisplayName = displayName.trim() || profile.email.split('@')[0] || '用户'
+
     const result = await updateProfile({
       displayName: displayName !== profile.display_name ? displayName : undefined,
       avatarUrl: avatarUrl !== profile.avatar_url ? avatarUrl || undefined : undefined,
@@ -171,9 +165,10 @@ export default function SettingsPage() {
       // 更新本地状态
       setProfile({
         ...profile,
-        display_name: displayName,
+        display_name: nextDisplayName,
         avatar_url: avatarUrl,
       })
+      setDisplayName(nextDisplayName)
       setAvatarPreview(null)
       // 重新加载整个页面以更新各处的顶栏缓存
       window.location.reload()
