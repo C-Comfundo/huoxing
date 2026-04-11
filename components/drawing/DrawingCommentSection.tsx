@@ -90,7 +90,9 @@ export default function DrawingCommentSection({
           item.id === commentId
             ? {
                 ...item,
-                likeCount: result.likeCount ?? 0,
+                likeCount: result.liked
+                  ? item.likeCount + 1
+                  : Math.max(0, item.likeCount - 1),
                 likedByViewer: result.liked ?? false,
               }
             : item

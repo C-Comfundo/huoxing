@@ -106,29 +106,7 @@ function revalidateDrawingPaths(issueSlug: string) {
   revalidatePath(`/issues/${issueSlug}`);
 }
 
-async function getDrawingCommentLikeCount(
-  supabase: ReturnType<typeof createClient>,
-  commentId: string
-) {
-  if (!commentId) {
-    return 0;
-  }
 
-  const { count, error } = await supabase
-    .from("issue_drawing_comment_likes")
-    .select("comment_id", { count: "exact", head: true })
-    .eq("comment_id", commentId);
-
-  if (error) {
-    console.error(
-      "[getDrawingCommentLikeCount] Failed to load drawing comment like count:",
-      error
-    );
-    return 0;
-  }
-
-  return count ?? 0;
-}
 
 export async function fetchDrawingComments(
   issueId: string
@@ -320,29 +298,6 @@ export async function toggleDrawingCommentLike(
     };
   }
 
-  const { data: comment, error: commentError } = await supabase
-    .from("issue_drawing_comments")
-    .select("id")
-    .eq("id", commentId)
-    .maybeSingle();
-
-  if (commentError) {
-    console.error(
-      "[toggleDrawingCommentLike] Failed to load drawing comment:",
-      commentError
-    );
-    return {
-      success: false,
-      message: "暂时无法确认这条评论，请稍后重试。",
-    };
-  }
-
-  if (!comment) {
-    return {
-      success: false,
-      message: "这条评论已经不存在了。",
-    };
-  }
 
   const { data: existingLike, error: existingLikeError } = await supabase
     .from("issue_drawing_comment_likes")
@@ -380,14 +335,10 @@ export async function toggleDrawingCommentLike(
       };
     }
 
-    const likeCount = await getDrawingCommentLikeCount(supabase, commentId);
-    revalidateDrawingPaths(input.issueSlug?.trim() ?? "");
-
     return {
       success: true,
       message: "已取消点赞。",
       commentId,
-      likeCount,
       liked: false,
     };
   }
@@ -410,14 +361,10 @@ export async function toggleDrawingCommentLike(
     };
   }
 
-  const likeCount = await getDrawingCommentLikeCount(supabase, commentId);
-  revalidateDrawingPaths(input.issueSlug?.trim() ?? "");
-
   return {
     success: true,
     message: "已点赞这条评论。",
     commentId,
-    likeCount,
     liked: true,
   };
 }
