@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MessageSquare } from "lucide-react";
+import { Heart, MessageSquare } from "lucide-react";
 import {
   submitDrawingComment,
+  toggleDrawingCommentLike,
   type DrawingComment,
 } from "@/app/actions/drawing-comments";
 
@@ -63,6 +64,38 @@ export default function DrawingCommentSection({
       setComments((prev) => [...prev, result.comment!]);
       setContent("");
       setAnonymous(false);
+      setMessage(result.message);
+    });
+  };
+
+  const handleLike = (commentId: string) => {
+    if (!isLoggedIn) {
+      alert("请先登录后再点赞");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await toggleDrawingCommentLike({
+        commentId,
+        issueSlug,
+      });
+
+      if (!result.success || result.liked === undefined) {
+        setMessage(result.message);
+        return;
+      }
+
+      setComments((prev) =>
+        prev.map((item) =>
+          item.id === commentId
+            ? {
+                ...item,
+                likeCount: result.likeCount ?? 0,
+                likedByViewer: result.liked ?? false,
+              }
+            : item
+        )
+      );
       setMessage(result.message);
     });
   };
@@ -141,13 +174,15 @@ export default function DrawingCommentSection({
         ) : (
           comments.map((item, index) => (
             <article
+              id={`drawing-comment-${item.id}`}
               key={item.id}
-              className={`rounded-sm border p-5 ${index % 3 === 0
+              className={`rounded-sm border p-5 ${
+                index % 3 === 0
                   ? "border-[#E6DDD5] bg-[#F4EFEA]"
                   : index % 3 === 1
                     ? "border-[#DDE3DA] bg-[#EEF1ED]"
                     : "border-[#DCE0E8] bg-[#EEF0F4]"
-                }`}
+              }`}
             >
               <div className="mb-3 space-y-2 text-xs text-[#9E9E9E]">
                 <p className="text-[11px] leading-relaxed text-[#6A6A6A]">
@@ -155,9 +190,29 @@ export default function DrawingCommentSection({
                 </p>
                 <p>{formatDate(item.createdAt)}</p>
               </div>
+
               <p className="whitespace-pre-wrap font-serif text-[15px] leading-7 text-[#3A3A3A]">
                 {item.content}
               </p>
+
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleLike(item.id)}
+                  disabled={isPending}
+                  aria-label={item.likedByViewer ? "取消点赞" : "点赞"}
+                  className="inline-flex items-center gap-1.5 text-xs text-[#9E9E9E] transition-colors hover:text-[#A1887F] disabled:opacity-50"
+                >
+                  <Heart
+                    className={`h-3.5 w-3.5 transition-all duration-200 ${
+                      item.likedByViewer
+                        ? "fill-[#A1887F] text-[#A1887F]"
+                        : "fill-none"
+                    }`}
+                  />
+                  <span>{item.likeCount}</span>
+                </button>
+              </div>
             </article>
           ))
         )}

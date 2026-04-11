@@ -1,10 +1,7 @@
 'use server'
 
+import { authorLabelFrom } from '@/lib/comment-authors'
 import { createClient } from '@/lib/supabase/server'
-
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
 
 export interface FavoritedArticle {
   articleId: string
@@ -15,26 +12,23 @@ export interface FavoritedArticle {
   favoritedAt: string
 }
 
-export interface LikedEcho {
-  echoId: string
+export interface LikedItem {
+  id: string
+  kind: 'echo' | 'drawing-comment'
   content: string
   authorLabel: string
   createdAt: string
   likedAt: string
-  article: {
-    id: string
-    slug: string
-    title: string
-  }
+  href: string
+  targetTitle: string
 }
-
-// ──────────────────────────────────────────────
-// getUserFavorites
-// ──────────────────────────────────────────────
 
 export async function getUserFavorites(): Promise<FavoritedArticle[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) return []
 
   const { data, error } = await supabase
@@ -58,7 +52,7 @@ export async function getUserFavorites(): Promise<FavoritedArticle[]> {
     return []
   }
 
-  type RawRow = {
+  type RawFavoriteRow = {
     created_at: string
     article: {
       id: string
@@ -70,7 +64,7 @@ export async function getUserFavorites(): Promise<FavoritedArticle[]> {
     }
   }
 
-  return (data as unknown as RawRow[])
+  return (data as unknown as RawFavoriteRow[])
     .filter((row) => row.article?.is_published)
     .map((row) => ({
       articleId: row.article.id,
@@ -82,42 +76,69 @@ export async function getUserFavorites(): Promise<FavoritedArticle[]> {
     }))
 }
 
-// ──────────────────────────────────────────────
-// getUserLikedEchoes
-// ──────────────────────────────────────────────
-
-export async function getUserLikedEchoes(): Promise<LikedEcho[]> {
+export async function getUserLikedItems(): Promise<LikedItem[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) return []
 
-  const { data, error } = await supabase
-    .from('likes')
-    .select(`
-      created_at,
-      echo:echoes!inner (
-        id,
-        content,
-        is_anonymous,
-        author_display_name,
+  const [echoLikesResult, drawingCommentLikesResult] = await Promise.all([
+    supabase
+      .from('likes')
+      .select(`
         created_at,
-        article:articles!inner (
+        echo:echoes!inner (
           id,
-          slug,
-          title,
-          is_published
+          content,
+          is_anonymous,
+          author_display_name,
+          created_at,
+          article:articles!inner (
+            id,
+            slug,
+            title,
+            is_published
+          )
         )
-      )
-    `)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('issue_drawing_comment_likes')
+      .select(`
+        created_at,
+        comment:issue_drawing_comments!inner (
+          id,
+          content,
+          is_anonymous,
+          author_display_name,
+          created_at,
+          issue:issues!inner (
+            id,
+            slug,
+            label,
+            published_at
+          )
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+  ])
 
-  if (error || !data) {
-    console.error('[getUserLikedEchoes] 查询失败:', error)
-    return []
+  if (echoLikesResult.error) {
+    console.error('[getUserLikedItems] 查询回响点赞失败:', echoLikesResult.error)
   }
 
-  type RawRow = {
+  if (drawingCommentLikesResult.error) {
+    console.error(
+      '[getUserLikedItems] 查询画里有话评论点赞失败:',
+      drawingCommentLikesResult.error
+    )
+  }
+
+  type RawEchoLikeRow = {
     created_at: string
     echo: {
       id: string
@@ -134,20 +155,62 @@ export async function getUserLikedEchoes(): Promise<LikedEcho[]> {
     }
   }
 
-  return (data as unknown as RawRow[])
+  type RawDrawingCommentLikeRow = {
+    created_at: string
+    comment: {
+      id: string
+      content: string
+      is_anonymous: boolean
+      author_display_name: string | null
+      created_at: string
+      issue: {
+        id: string
+        slug: string
+        label: string | null
+        published_at: string | null
+      }
+    }
+  }
+
+  const echoItems = ((echoLikesResult.data as unknown as RawEchoLikeRow[] | null) ?? [])
     .filter((row) => row.echo?.article?.is_published)
     .map((row) => ({
-      echoId: row.echo.id,
+      id: row.echo.id,
+      kind: 'echo' as const,
       content: row.echo.content,
-      authorLabel: row.echo.is_anonymous
-        ? '匿名'
-        : row.echo.author_display_name || '用户',
+      authorLabel: authorLabelFrom(
+        row.echo.is_anonymous,
+        row.echo.author_display_name
+      ),
       createdAt: row.echo.created_at,
       likedAt: row.created_at,
-      article: {
-        id: row.echo.article.id,
-        slug: row.echo.article.slug,
-        title: row.echo.article.title || '未命名文章',
-      },
+      href: `/articles/${row.echo.article.slug}#echo-${row.echo.id}`,
+      targetTitle: row.echo.article.title || '未命名文章',
     }))
+
+  const drawingCommentItems = (
+    (drawingCommentLikesResult.data as unknown as RawDrawingCommentLikeRow[] | null) ?? []
+  )
+    .filter(
+      (row) =>
+        Boolean(row.comment?.issue?.slug) && Boolean(row.comment?.issue?.published_at)
+    )
+    .map((row) => ({
+      id: row.comment.id,
+      kind: 'drawing-comment' as const,
+      content: row.comment.content,
+      authorLabel: authorLabelFrom(
+        row.comment.is_anonymous,
+        row.comment.author_display_name
+      ),
+      createdAt: row.comment.created_at,
+      likedAt: row.created_at,
+      href: `/issues/${row.comment.issue.slug}/drawing#drawing-comment-${row.comment.id}`,
+      targetTitle: `${row.comment.issue.label || '当期'} · 画里有话`,
+    }))
+
+  return [...echoItems, ...drawingCommentItems].sort(
+    (left, right) =>
+      new Date(right.likedAt).getTime() - new Date(left.likedAt).getTime()
+  )
 }

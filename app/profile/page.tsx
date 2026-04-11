@@ -2,24 +2,25 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
   Bookmark,
+  BookOpen,
   Heart,
   Loader2,
-  Settings,
-  BookOpen,
   MessageCircle,
+  MessageSquare,
+  Settings,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { loadCurrentUserProfile } from '@/lib/current-user-profile'
 import {
   getUserFavorites,
-  getUserLikedEchoes,
+  getUserLikedItems,
   type FavoritedArticle,
-  type LikedEcho,
+  type LikedItem,
 } from '@/app/actions/profile-data'
 
 type Tab = 'favorites' | 'likes'
@@ -36,7 +37,7 @@ function formatDate(input: string): string {
 
 function truncate(text: string, max: number): string {
   if (text.length <= max) return text
-  return text.slice(0, max).trim() + '…'
+  return `${text.slice(0, max).trim()}...`
 }
 
 export default function ProfilePage() {
@@ -51,14 +52,13 @@ export default function ProfilePage() {
 
   const [tab, setTab] = useState<Tab>('favorites')
   const [favorites, setFavorites] = useState<FavoritedArticle[]>([])
-  const [likedEchoes, setLikedEchoes] = useState<LikedEcho[]>([])
+  const [likedItems, setLikedItems] = useState<LikedItem[]>([])
   const [dataLoading, setDataLoading] = useState(false)
   const [dataLoaded, setDataLoaded] = useState<Record<Tab, boolean>>({
     favorites: false,
     likes: false,
   })
 
-  // Load user profile
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
@@ -84,7 +84,6 @@ export default function ProfilePage() {
     load()
   }, [router])
 
-  // Load tab data lazily
   useEffect(() => {
     if (loading || !profile) return
     if (dataLoaded[tab]) return
@@ -96,8 +95,8 @@ export default function ProfilePage() {
           const data = await getUserFavorites()
           setFavorites(data)
         } else {
-          const data = await getUserLikedEchoes()
-          setLikedEchoes(data)
+          const data = await getUserLikedItems()
+          setLikedItems(data)
         }
         setDataLoaded((prev) => ({ ...prev, [tab]: true }))
       } catch (error) {
@@ -112,30 +111,29 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F7F5F0] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-[#A1887F] animate-spin" />
+      <div className="flex min-h-screen items-center justify-center bg-[#F7F5F0]">
+        <Loader2 className="h-6 w-6 animate-spin text-[#A1887F]" />
       </div>
     )
   }
 
   if (!profile) return null
 
-  const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: 'favorites', label: '我的收藏', icon: <Bookmark className="w-4 h-4" /> },
-    { key: 'likes', label: '点赞的回响', icon: <Heart className="w-4 h-4" /> },
+  const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
+    { key: 'favorites', label: '我的收藏', icon: <Bookmark className="h-4 w-4" /> },
+    { key: 'likes', label: '点赞的内容', icon: <Heart className="h-4 w-4" /> },
   ]
 
   return (
     <div className="min-h-screen bg-[#F7F5F0]">
-      {/* Header */}
-      <div className="bg-white/60 backdrop-blur-sm border-b border-[#E8E4DF] sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="sticky top-0 z-10 border-b border-[#E8E4DF] bg-white/60 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-6 py-4">
           <div className="flex items-center space-x-4">
             <Link
               href="/"
-              className="inline-flex items-center space-x-2 text-[#5D5D5D] hover:text-[#3A3A3A] transition-colors"
+              className="inline-flex items-center space-x-2 text-[#5D5D5D] transition-colors hover:text-[#3A3A3A]"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="h-4 w-4" />
               <span className="font-youyou text-sm">返回首页</span>
             </Link>
             <span className="text-[#D7CCC8]">|</span>
@@ -144,11 +142,9 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        {/* Profile Card */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 border border-[#E8E4DF] mb-8">
+      <div className="mx-auto max-w-2xl px-6 py-8">
+        <div className="mb-8 rounded-2xl border border-[#E8E4DF] bg-white/60 p-8 backdrop-blur-sm">
           <div className="flex items-center space-x-5">
-            {/* Avatar */}
             {profile.avatarUrl ? (
               <Image
                 src={profile.avatarUrl}
@@ -156,75 +152,68 @@ export default function ProfilePage() {
                 width={72}
                 height={72}
                 unoptimized
-                className="w-[72px] h-[72px] rounded-full object-cover border-2 border-[#E8E4DF] shrink-0"
+                className="h-[72px] w-[72px] shrink-0 rounded-full border-2 border-[#E8E4DF] object-cover"
               />
             ) : (
-              <div className="w-[72px] h-[72px] rounded-full bg-[#A1887F] flex items-center justify-center text-white text-2xl font-youyou border-2 border-[#E8E4DF] shrink-0">
+              <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full border-2 border-[#E8E4DF] bg-[#A1887F] text-2xl font-youyou text-white">
                 {profile.displayName.charAt(0).toUpperCase()}
               </div>
             )}
 
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <h2 className="font-youyou text-xl text-[#3A3A3A] truncate">
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate font-youyou text-xl text-[#3A3A3A]">
                 {profile.displayName}
               </h2>
-              <p className="text-sm text-[#8D8D8D] truncate mt-1">{profile.email}</p>
+              <p className="mt-1 truncate text-sm text-[#8D8D8D]">{profile.email}</p>
               <Link
                 href="/settings"
-                className="inline-flex items-center space-x-1.5 mt-3 text-xs text-[#A1887F] hover:text-[#8D6E63] transition-colors"
+                className="mt-3 inline-flex items-center space-x-1.5 text-xs text-[#A1887F] transition-colors hover:text-[#8D6E63]"
               >
-                <Settings className="w-3.5 h-3.5" />
+                <Settings className="h-3.5 w-3.5" />
                 <span className="font-youyou tracking-wide">编辑资料</span>
               </Link>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-[#E8E4DF] mb-6">
-          {tabs.map((t) => (
+        <div className="mb-6 flex border-b border-[#E8E4DF]">
+          {tabs.map((item) => (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex items-center space-x-2 px-5 py-3 text-sm font-youyou tracking-wide transition-all duration-300 border-b-2 -mb-[1px] ${
-                tab === t.key
+              key={item.key}
+              onClick={() => setTab(item.key)}
+              className={`-mb-[1px] flex items-center space-x-2 border-b-2 px-5 py-3 text-sm font-youyou tracking-wide transition-all duration-300 ${
+                tab === item.key
                   ? 'border-[#A1887F] text-[#3A3A3A]'
                   : 'border-transparent text-[#8D8D8D] hover:text-[#5D5D5D]'
               }`}
             >
-              {t.icon}
-              <span>{t.label}</span>
+              {item.icon}
+              <span>{item.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Tab Content */}
         {dataLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-5 h-5 text-[#A1887F] animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin text-[#A1887F]" />
           </div>
         ) : tab === 'favorites' ? (
           <FavoritesList items={favorites} />
         ) : (
-          <LikedEchoesList items={likedEchoes} />
+          <LikedItemsList items={likedItems} />
         )}
       </div>
     </div>
   )
 }
 
-// ──────────────────────────────────────────────
-// Sub-components
-// ──────────────────────────────────────────────
-
 function FavoritesList({ items }: { items: FavoritedArticle[] }) {
   if (items.length === 0) {
     return (
-      <div className="text-center py-16 space-y-3">
-        <Bookmark className="w-10 h-10 mx-auto text-[#D7CCC8]" />
+      <div className="space-y-3 py-16 text-center">
+        <Bookmark className="mx-auto h-10 w-10 text-[#D7CCC8]" />
         <p className="font-youyou text-[#8D8D8D]">还没有收藏的文章</p>
-        <p className="text-sm text-[#BCAAA4]">阅读文章时点击收藏按钮即可添加</p>
+        <p className="text-sm text-[#BCAAA4]">阅读文章时点击收藏按钮，即可添加到这里</p>
       </div>
     )
   }
@@ -235,14 +224,14 @@ function FavoritesList({ items }: { items: FavoritedArticle[] }) {
         <Link
           key={item.articleId}
           href={`/articles/${item.slug}`}
-          className="group block bg-white/60 backdrop-blur-sm rounded-xl p-5 border border-[#E8E4DF] transition-all duration-300 hover:bg-white hover:shadow-md hover:-translate-y-0.5"
+          className="group block rounded-xl border border-[#E8E4DF] bg-white/60 p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <h3 className="font-youyou text-base text-[#3A3A3A] group-hover:text-[#A1887F] transition-colors truncate">
+              <h3 className="truncate font-youyou text-base text-[#3A3A3A] transition-colors group-hover:text-[#A1887F]">
                 {item.title}
               </h3>
-              <div className="flex items-center gap-3 mt-2 text-xs text-[#8D8D8D]">
+              <div className="mt-2 flex items-center gap-3 text-xs text-[#8D8D8D]">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-1 w-1 rounded-full bg-[#D7CCC8]" />
                   {item.category}
@@ -250,8 +239,8 @@ function FavoritesList({ items }: { items: FavoritedArticle[] }) {
                 <span>作者：{item.author}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0 text-xs text-[#BCAAA4]">
-              <Bookmark className="w-3.5 h-3.5" />
+            <div className="flex shrink-0 items-center gap-2 text-xs text-[#BCAAA4]">
+              <Bookmark className="h-3.5 w-3.5" />
               <span>{formatDate(item.favoritedAt)}</span>
             </div>
           </div>
@@ -261,50 +250,54 @@ function FavoritesList({ items }: { items: FavoritedArticle[] }) {
   )
 }
 
-function LikedEchoesList({ items }: { items: LikedEcho[] }) {
+function LikedItemsList({ items }: { items: LikedItem[] }) {
   if (items.length === 0) {
     return (
-      <div className="text-center py-16 space-y-3">
-        <Heart className="w-10 h-10 mx-auto text-[#D7CCC8]" />
-        <p className="font-youyou text-[#8D8D8D]">还没有点赞的回响</p>
-        <p className="text-sm text-[#BCAAA4]">阅读文章下方的回响，点击 ♥ 即可添加</p>
+      <div className="space-y-3 py-16 text-center">
+        <Heart className="mx-auto h-10 w-10 text-[#D7CCC8]" />
+        <p className="font-youyou text-[#8D8D8D]">还没有点赞的内容</p>
+        <p className="text-sm text-[#BCAAA4]">
+          在文章回响或画里有话评论里点击心形按钮，就会出现在这里
+        </p>
       </div>
     )
   }
 
   return (
     <div className="space-y-3">
-      {items.map((item) => (
-        <Link
-          key={item.echoId}
-          href={`/articles/${item.article.slug}#echo-${item.echoId}`}
-          className="group block bg-white/60 backdrop-blur-sm rounded-xl p-5 border border-[#E8E4DF] transition-all duration-300 hover:bg-white hover:shadow-md hover:-translate-y-0.5"
-        >
-          {/* Echo content */}
-          <p className="font-serif text-sm leading-7 text-[#3A3A3A] group-hover:text-[#5D5D5D]">
-            「{truncate(item.content, 80)}」
-          </p>
+      {items.map((item) => {
+        const TargetIcon = item.kind === 'echo' ? BookOpen : MessageSquare
 
-          {/* Meta */}
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-3 text-xs text-[#8D8D8D]">
-              <span className="inline-flex items-center gap-1">
-                <MessageCircle className="w-3 h-3 opacity-60" />
-                {item.authorLabel}
-              </span>
-              <span className="text-[#D7CCC8]">·</span>
-              <span className="inline-flex items-center gap-1">
-                <BookOpen className="w-3 h-3 opacity-60" />
-                <span className="truncate max-w-[160px]">{item.article.title}</span>
-              </span>
+        return (
+          <Link
+            key={`${item.kind}-${item.id}`}
+            href={item.href}
+            className="group block rounded-xl border border-[#E8E4DF] bg-white/60 p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+          >
+            <p className="font-serif text-sm leading-7 text-[#3A3A3A] group-hover:text-[#5D5D5D]">
+              「{truncate(item.content, 80)}」
+            </p>
+
+            <div className="mt-3 flex items-center justify-between">
+              <div className="flex items-center gap-3 text-xs text-[#8D8D8D]">
+                <span className="inline-flex items-center gap-1">
+                  <MessageCircle className="h-3 w-3 opacity-60" />
+                  {item.authorLabel}
+                </span>
+                <span className="text-[#D7CCC8]">·</span>
+                <span className="inline-flex items-center gap-1">
+                  <TargetIcon className="h-3 w-3 opacity-60" />
+                  <span className="max-w-[180px] truncate">{item.targetTitle}</span>
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5 text-xs text-[#BCAAA4]">
+                <Heart className="h-3 w-3" />
+                <span>{formatDate(item.likedAt)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0 text-xs text-[#BCAAA4]">
-              <Heart className="w-3 h-3" />
-              <span>{formatDate(item.likedAt)}</span>
-            </div>
-          </div>
-        </Link>
-      ))}
+          </Link>
+        )
+      })}
     </div>
   )
 }
