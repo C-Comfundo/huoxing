@@ -5,7 +5,7 @@ import DebateWall from "@/components/debate/DebateWall";
 import IssueBadge from "@/components/IssueBadge";
 import Navbar from "@/components/Navbar";
 import { getIssueBySlug } from "@/lib/articles";
-import { selectDefaultDebateTopicId } from "@/lib/debate-schedule";
+import { getDebateTopicTiming, selectDefaultDebateTopicId, type DebateTopicStatus } from "@/lib/debate-schedule";
 import { getDebateTopicsByIssueId } from "@/lib/debates";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,7 +32,25 @@ export default async function IssueDebatePage({ params, searchParams }: PageProp
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const topics = await getDebateTopicsByIssueId(issue.id, user?.id ?? null);
+  const topics = (await getDebateTopicsByIssueId(issue.id, user?.id ?? null)).sort((a, b) => {
+    const nowMs = Date.now();
+    const aStatus =
+      a.startsAt && a.endsAt
+        ? getDebateTopicTiming(a.startsAt, a.endsAt, nowMs).status
+        : "not_started";
+    const bStatus =
+      b.startsAt && b.endsAt
+        ? getDebateTopicTiming(b.startsAt, b.endsAt, nowMs).status
+        : "not_started";
+
+    const priority: Record<DebateTopicStatus, number> = {
+      ongoing: 0,
+      not_started: 1,
+      ended: 2,
+    };
+
+    return priority[aStatus] - priority[bStatus];
+  });
   const requestedTopicId = typeof searchParams?.topic === "string" ? searchParams.topic : null;
   const initialNowMs = Date.now();
   const initialTopicId = selectDefaultDebateTopicId(topics, requestedTopicId, initialNowMs);

@@ -2,7 +2,7 @@ import Feed from "@/components/Feed";
 import Hero from "@/components/Hero";
 import Navbar from "@/components/Navbar";
 import { getCurrentIssue } from "@/lib/articles";
-import { getDebateTopicTiming } from "@/lib/debate-schedule";
+import { getDebateTopicTiming, type DebateTopicStatus } from "@/lib/debate-schedule";
 import { getDebateTopicSummariesByIssueId } from "@/lib/debates";
 import { getIssueTOC } from "@/lib/issue-toc";
 import { getPreferredPublicImagePath } from "@/lib/public-assets";
@@ -17,17 +17,27 @@ export default async function Home() {
     : [];
   const debateEntries =
     currentIssue && debateTopics.length > 0
-      ? debateTopics.map((topic) => ({
-          href: `/issues/${currentIssue.slug}/debate?topic=${topic.id}`,
-          issueLabel: currentIssue.label,
-          title: topic.title,
-          description: topic.description,
-          startsAt: topic.startsAt,
-          endsAt: topic.endsAt,
-          status: topic.startsAt && topic.endsAt
-            ? getDebateTopicTiming(topic.startsAt, topic.endsAt, nowMs).status
-            : "not_started",
-        }))
+      ? debateTopics
+          .map((topic) => ({
+            href: `/issues/${currentIssue.slug}/debate?topic=${topic.id}`,
+            issueLabel: currentIssue.label,
+            title: topic.title,
+            description: topic.description,
+            startsAt: topic.startsAt,
+            endsAt: topic.endsAt,
+            status:
+              topic.startsAt && topic.endsAt
+                ? getDebateTopicTiming(topic.startsAt, topic.endsAt, nowMs).status
+                : "not_started",
+          }))
+          .sort((a, b) => {
+            const priority: Record<DebateTopicStatus, number> = {
+              ongoing: 0,
+              not_started: 1,
+              ended: 2,
+            };
+            return priority[a.status] - priority[b.status];
+          })
       : [];
   const tocSections = currentIssue
     ? await getIssueTOC(currentIssue.id)
