@@ -1,5 +1,11 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
+import {
+  ARTICLE_CATEGORY_HEADINGS,
+  ARTICLE_CATEGORY_PATHS,
+  getArticleCategoryAliases,
+  normalizeArticleCategory,
+} from "@/lib/article-categories";
 
 export interface Issue {
   id: string;
@@ -29,20 +35,19 @@ export interface Article {
 }
 
 export const CATEGORY_ORDER = [
-  "有话慢谈",
   "人间剧场",
+  "有话漫谈",
   "胡说八道",
   "三行两句",
   "见字如面",
+  "把话说尽",
+  "画里有话",
   "画里话外",
 ] as const;
 
 export const CATEGORY_PATHS: Record<string, string> = {
-  有话慢谈: "/slow-talk",
-  人间剧场: "/theater",
-  胡说八道: "/nonsense",
-  三行两句: "/poems",
-  见字如面: "/letters",
+  ...ARTICLE_CATEGORY_PATHS,
+  画里有话: "/drawing",
   画里话外: "/drawing",
 };
 
@@ -106,11 +111,7 @@ function toText(value: unknown): string {
 }
 
 export function normalizeCategory(category: string): string {
-  if (category === "有话漫谈") {
-    return "有话慢谈";
-  }
-
-  return category;
+  return normalizeArticleCategory(category);
 }
 
 interface IssuePageCategoryHeading {
@@ -120,11 +121,7 @@ interface IssuePageCategoryHeading {
 
 /** 期刊专题页 `/issues/[slug]` 分栏大标题（与导航、栏目独立页、文章内文小标题无关） */
 const ISSUE_PAGE_CATEGORY_HEADINGS: Record<string, IssuePageCategoryHeading> = {
-  有话慢谈: { title: "有话慢谈", subtitle: "随笔" },
-  人间剧场: { title: "人间剧场", subtitle: "小说" },
-  胡说八道: { title: "胡说八道", subtitle: "杂谈" },
-  三行两句: { title: "三行两句", subtitle: "诗歌" },
-  见字如面: { title: "见字如面", subtitle: "书信" },
+  ...ARTICLE_CATEGORY_HEADINGS,
   画里有话: { title: "画里有话", subtitle: "漫画" },
   画里话外: { title: "画里话外", subtitle: "画作" },
 };
@@ -140,11 +137,7 @@ export function getIssuePageCategoryHeading(category: string): string {
 }
 
 function getCategoryAliases(category: string) {
-  if (category === "有话慢谈" || category === "有话漫谈") {
-    return ["有话慢谈", "有话漫谈"];
-  }
-
-  return [category];
+  return getArticleCategoryAliases(category);
 }
 
 export function getCategoryPath(category: string) {

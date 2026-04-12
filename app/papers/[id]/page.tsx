@@ -6,8 +6,8 @@ interface PageProps {
   };
 }
 
-export default function SlowTalkArticlePage({ params }: PageProps) {
+export default function PapersArticlePage({ params }: PageProps) {
   const slug = decodeURIComponent(params.id);
 
-  return <ArticleDetail slug={slug} backHref="/slow-talk" fallbackCategory="有话漫谈" />;
+  return <ArticleDetail slug={slug} backHref="/papers" fallbackCategory="把话说尽" />;
 }

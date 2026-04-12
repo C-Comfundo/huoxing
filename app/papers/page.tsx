@@ -4,9 +4,9 @@ import { getArticlesByCategory, getCurrentIssue } from "@/lib/articles";
 
 export const revalidate = 60;
 
-export default async function SlowTalkPage() {
+export default async function PapersPage() {
   const currentIssue = await getCurrentIssue();
-  const articles = await getArticlesByCategory("有话漫谈", 30, {
+  const articles = await getArticlesByCategory("把话说尽", 30, {
     issueId: currentIssue?.id ?? null,
   });
 
@@ -16,9 +16,9 @@ export default async function SlowTalkPage() {
 
   return (
     <CategoryStoriesPage
-      title="有话漫谈"
-      englishTitle="Slow Talks"
-      description="那些需要缓慢展开、被认真倾听的表达。"
+      title="把话说尽"
+      englishTitle="Stated in Full"
+      description="适合把论证、推演与来龙去脉都说尽的长文。"
       articles={articles}
       issue={currentIssue}
     />
