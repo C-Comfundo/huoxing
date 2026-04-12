@@ -204,11 +204,11 @@ export default function SettingsPage() {
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link 
-              href="/" 
+              href="/profile" 
               className="inline-flex items-center space-x-2 text-[#5D5D5D] hover:text-[#3A3A3A] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="font-youyou text-sm">返回首页</span>
+              <span className="font-youyou text-sm">返回</span>
             </Link>
             <span className="text-[#D7CCC8]">|</span>
             <h1 className="font-youyou text-lg text-[#3A3A3A]">个人设置</h1>
