@@ -5,7 +5,7 @@ interface SectionPlaceholderProps {
   eyebrow: string;
   title: string;
   description: string;
-  note: string;
+  note?: string;
   ctaHref: string;
   ctaLabel: string;
 }
@@ -39,11 +39,14 @@ export default function SectionPlaceholder({
               {description}
             </p>
 
-            <div className="mx-auto mt-10 h-px w-20 bg-[#D8C8BF]" />
-
-            <p className="mx-auto mt-10 max-w-xl font-serif text-sm leading-loose text-[#8E8179] md:text-base">
-              {note}
-            </p>
+            {note ? (
+              <>
+                <div className="mx-auto mt-10 h-px w-20 bg-[#D8C8BF]" />
+                <p className="mx-auto mt-10 max-w-xl font-serif text-sm leading-loose text-[#8E8179] md:text-base">
+                  {note}
+                </p>
+              </>
+            ) : null}
 
             <div className="mt-12">
               <Link

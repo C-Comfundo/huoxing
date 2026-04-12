@@ -6,7 +6,7 @@ export default function BoardPage() {
       eyebrow="Board"
       title="留言板"
       description="这里会开放更自由的留言、回应与驻足，让读者之间能留下看得见的回声。"
-      note="页面已经接入导航，后面做真实留言功能时可以直接在这里继续扩展。"
+      
       ctaHref="/about"
       ctaLabel="先了解我们"
     />
