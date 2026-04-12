@@ -185,8 +185,6 @@ export default function Navbar() {
               <div
                 key={item.name}
                 className="relative"
-                onMouseEnter={() => setOpenDesktopMenu(item.name)}
-                onMouseLeave={() => setOpenDesktopMenu((current) => (current === item.name ? null : current))}
               >
                 <button
                   type="button"
