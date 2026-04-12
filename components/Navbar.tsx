@@ -39,7 +39,7 @@ const primaryNavItems: PrimaryNavItem[] = [
     name: "文字",
     items: [
       { name: "人间剧场", subtitle: "小说", href: "/theater" },
-      { name: "有话漫谈", subtitle: "随笔", href: "/slow-talk" },
+      { name: "有话慢谈", subtitle: "随笔", href: "/slow-talk" },
       { name: "胡说八道", subtitle: "杂谈", href: "/nonsense" },
       { name: "三行两句", subtitle: "诗歌", href: "/poems" },
       { name: "见字如面", subtitle: "书信", href: "/letters" },

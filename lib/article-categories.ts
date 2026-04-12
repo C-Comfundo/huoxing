@@ -13,8 +13,8 @@ export const ARTICLE_CATEGORY_DEFINITIONS = [
     path: "/theater",
   },
   {
-    value: "有话漫谈",
-    label: "有话漫谈",
+    value: "有话慢谈",
+    label: "有话慢谈",
     subtitle: "随笔",
     path: "/slow-talk",
   },
@@ -63,8 +63,8 @@ export const ARTICLE_CATEGORY_HEADINGS = Object.fromEntries(
 ) as Record<string, { title: string; subtitle?: string }>;
 
 export function normalizeArticleCategory(category: string): string {
-  if (category === "有话慢谈") {
-    return "有话漫谈";
+  if (category === "有话漫谈") {
+    return "有话慢谈";
   }
 
   return category;
@@ -73,8 +73,8 @@ export function normalizeArticleCategory(category: string): string {
 export function getArticleCategoryAliases(category: string) {
   const normalized = normalizeArticleCategory(category);
 
-  if (normalized === "有话漫谈") {
-    return ["有话漫谈", "有话慢谈"];
+  if (normalized === "有话慢谈") {
+    return ["有话慢谈", "有话漫谈"];
   }
 
   return [normalized];

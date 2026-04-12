@@ -6,7 +6,7 @@ export const revalidate = 60;
 
 export default async function SlowTalkPage() {
   const currentIssue = await getCurrentIssue();
-  const articles = await getArticlesByCategory("有话漫谈", 30, {
+  const articles = await getArticlesByCategory("有话慢谈", 30, {
     issueId: currentIssue?.id ?? null,
   });
 
@@ -16,7 +16,7 @@ export default async function SlowTalkPage() {
 
   return (
     <CategoryStoriesPage
-      title="有话漫谈"
+      title="有话慢谈"
       englishTitle="Slow Talks"
       description="那些需要缓慢展开、被认真倾听的表达。"
       articles={articles}

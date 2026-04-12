@@ -36,7 +36,7 @@ export interface Article {
 
 export const CATEGORY_ORDER = [
   "人间剧场",
-  "有话漫谈",
+  "有话慢谈",
   "胡说八道",
   "三行两句",
   "见字如面",
