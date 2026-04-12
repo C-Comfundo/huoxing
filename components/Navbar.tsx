@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Archive, Menu, PenLine, PenSquare, X } from "lucide-react";
+import { Archive, Menu, PenLine, PenSquare, Search, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { loadCurrentUserProfile } from "@/lib/current-user-profile";
 import UserMenu from "./UserMenu";
+
 
 interface UserInfo {
   email: string;
@@ -32,6 +33,7 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const supabase = createClient();
@@ -106,6 +108,13 @@ export default function Navbar() {
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
+    }
+  };
+
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-[#D7CCC8]/30 bg-[#F7F5F0]/80 backdrop-blur-sm transition-all duration-300">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
@@ -130,6 +139,17 @@ export default function Navbar() {
         </div>
 
         <div className="hidden items-center space-x-6 md:flex lg:space-x-8">
+          <form onSubmit={handleSearch} className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜索文章或作者..."
+              className="pl-10 pr-4 py-2 rounded-full border border-[#D7CCC8] bg-white/60 text-sm text-[#5D5D5D] focus:outline-none focus:ring-2 focus:ring-[#A1887F]/30 focus:border-[#A1887F]"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#9E9E9E]" />
+          </form>
+          
           {utilityItems.map((item) => {
             const Icon = item.icon;
 
@@ -195,6 +215,17 @@ export default function Navbar() {
           className="fixed right-0 top-20 h-[calc(100vh-5rem)] w-72 max-w-[85vw] border-l border-[#D7CCC8]/50 bg-[#F7F5F0] shadow-xl md:hidden"
         >
           <div className="flex h-full flex-col overflow-y-auto p-6">
+            <form onSubmit={handleSearch} className="mb-6 relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="搜索文章或作者..."
+                className="w-full pl-10 pr-4 py-2 rounded-full border border-[#D7CCC8] bg-white/60 text-sm text-[#5D5D5D] focus:outline-none focus:ring-2 focus:ring-[#A1887F]/30 focus:border-[#A1887F]"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#9E9E9E]" />
+            </form>
+            
             <div className="flex flex-col gap-5">
               {navItems.map((item) => (
                 <Link

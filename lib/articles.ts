@@ -486,3 +486,26 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
   const [article] = await populateEchoCounts([mapArticle(data)]);
   return article ?? null;
 }
+
+
+export async function searchArticles(query: string): Promise<Article[]> {
+  const nowIso = getPublishCutoffIso();
+  const { data, error } = await runPublicQuery<RawArticleRow[]>((db) =>
+    applyPublicIssueRelationVisibility(
+      db
+      .from("articles")
+      .select(PUBLIC_ARTICLE_SELECT)
+      .eq("is_published", true)
+      .or(`title.ilike.%${query}%,author_name.ilike.%${query}%`)
+      .order("published_at", { ascending: false }),
+      nowIso
+    )
+  );
+  
+  if (error || !data) {
+    console.error('搜索文章失败:', error);
+    return [];
+  }
+  
+  return populateEchoCounts(data.map(mapArticle));
+}
