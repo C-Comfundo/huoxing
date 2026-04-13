@@ -40,7 +40,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
           </div>
           
           <h1 className="font-youyou text-4xl text-[#2C2C2C] md:text-5xl">
-            搜索结果: "{query}"
+            搜索结果：&quot;{query}&quot;
+
           </h1>
           
           <p className="mt-4 text-lg text-[#6C665F]">
@@ -49,7 +50,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
         </header>
         
         {results.length === 0 ? (
-          <div className="rounded-[2rem] border border-[#E8E4DF] bg-white/70 px-8 py-14 text-center text-[#8D8D8D]">
+          没有找到与 &quot;{query}&quot; 相关的文章
+
             没有找到与 "{query}" 相关的文章
           </div>
         ) : (
