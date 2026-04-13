@@ -54,9 +54,9 @@ const gameEntries: readonly GameEntry[] = [
       "在职场、生活与网络的典型场景里，识别那些让你不断自证的隐形陷阱，拆解叙事，找到更清醒的破局方式。",
     href: "https://trap-quiz.aifnd.top/",
     stats: [
-      { value: "3", label: "现实场景" },
-      { value: "暗黑", label: "体验氛围" },
-      { value: "互动", label: "测试形式" },
+      { value: "18", label: "题目数" },
+      { value: "3", label: "核心维度" },
+      { value: "5", label: "预计时间" },
     ],
     cta: "开始破局",
     theme: "matrix",
