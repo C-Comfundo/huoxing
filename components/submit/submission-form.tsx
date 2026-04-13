@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Loader2, Send, X } from "lucide-react";
 import { submitManuscript } from "@/app/actions/submissions";
+import { ARTICLE_CATEGORY_OPTIONS } from "@/lib/article-categories";
 import SuccessLetterModal from "./success-letter-modal";
 
 const MAX_FILE_SIZE_BYTES = 4.5 * 1024 * 1024;
@@ -149,11 +150,11 @@ export default function SubmissionForm() {
               <option value="" disabled>
                 请选择栏目
               </option>
-              <option value="有话慢谈">有话慢谈</option>
-              <option value="人间剧场">人间剧场</option>
-              <option value="胡说八道">胡说八道</option>
-              <option value="三行两句">三行两句</option>
-              <option value="见字如面">见字如面</option>
+              {ARTICLE_CATEGORY_OPTIONS.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>

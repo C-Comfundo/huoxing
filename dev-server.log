@@ -1,0 +1,16 @@
+
+> spark-frontend@0.1.0 dev
+> next dev
+
+   ▲ Next.js 14.1.0
+   - Local:        http://localhost:3000
+   - Environments: .env.local
+
+ ✓ Ready in 10.5s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 969ms (116 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 21.8s (1643 modules)
+ ○ Compiling /manifest.webmanifest ...
+ ✓ Compiled /manifest.webmanifest in 985ms (934 modules)
+^C^C

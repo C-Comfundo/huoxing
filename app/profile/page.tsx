@@ -134,7 +134,7 @@ export default function ProfilePage() {
               className="inline-flex items-center space-x-2 text-[#5D5D5D] transition-colors hover:text-[#3A3A3A]"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span className="font-youyou text-sm">返回首页</span>
+              <span className="font-youyou text-sm">返回</span>
             </Link>
             <span className="text-[#D7CCC8]">|</span>
             <h1 className="font-youyou text-lg text-[#3A3A3A]">个人主页</h1>

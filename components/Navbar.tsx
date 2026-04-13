@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Archive, Menu, PenLine, PenSquare, Search, X } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Menu, PenLine, PenSquare, Search, X } from "lucide-react";
+
 import { createClient } from "@/lib/supabase/client";
 import { loadCurrentUserProfile } from "@/lib/current-user-profile";
 import UserMenu from "./UserMenu";
@@ -14,23 +15,56 @@ interface UserInfo {
   avatarUrl?: string | null;
 }
 
-const navItems = [
-  { name: "有话慢谈", href: "/slow-talk" },
-  { name: "人间剧场", href: "/theater" },
-  { name: "胡说八道", href: "/nonsense" },
-  { name: "三行两句", href: "/poems" },
-  { name: "见字如面", href: "/letters" },
-  { name: "画里有话", href: "/drawing" },
+interface NavLinkItem {
+  name: string;
+  href: string;
+  subtitle?: string;
+}
+
+interface NavGroupItem {
+  name: string;
+  items: NavLinkItem[];
+}
+
+type PrimaryNavItem = NavLinkItem | NavGroupItem;
+
+const primaryNavItems: PrimaryNavItem[] = [
+  {
+    name: "文字",
+    items: [
+      { name: "人间剧场", subtitle: "小说", href: "/theater" },
+      { name: "有话慢谈", subtitle: "随笔", href: "/slow-talk" },
+      { name: "胡说八道", subtitle: "杂谈", href: "/nonsense" },
+      { name: "三行两句", subtitle: "诗歌", href: "/poems" },
+      { name: "见字如面", subtitle: "书信", href: "/letters" },
+      { name: "把话说尽", subtitle: "论文", href: "/papers" },
+    ],
+  },
+  {
+    name: "画作",
+    items: [{ name: "画里有话", href: "/drawing" }],
+  },
+  { name: "声音", href: "/sound" },
+  { name: "影像", href: "/video" },
+  { name: "游戏", href: "/game" },
+  { name: "留言板", href: "/board" },
 ];
 
 const utilityItems = [
   { name: "投稿", href: "/submit", icon: PenSquare },
-  { name: "归档", href: "/issues", icon: Archive },
+  { name: "往期", href: "/issues", icon: Archive },
   { name: "关于我们", href: "/about", icon: PenLine },
 ];
 
+function isNavGroup(item: PrimaryNavItem): item is NavGroupItem {
+  return "items" in item;
+}
+
 export default function Navbar() {
+  const navRef = useRef<HTMLElement>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openDesktopMenu, setOpenDesktopMenu] = useState<string | null>(null);
+  const [openMobileGroup, setOpenMobileGroup] = useState<string | null>(null);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,21 +126,40 @@ export default function Navbar() {
   }, [isMobileMenuOpen]);
 
   useEffect(() => {
-    if (!isMobileMenuOpen) {
+    if (!isMobileMenuOpen && !openDesktopMenu) {
       return;
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsMobileMenuOpen(false);
+        setOpenDesktopMenu(null);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isMobileMenuOpen]);
+  }, [isMobileMenuOpen, openDesktopMenu]);
 
-  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+  useEffect(() => {
+    if (!openDesktopMenu) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!navRef.current?.contains(event.target as Node)) {
+        setOpenDesktopMenu(null);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    return () => window.removeEventListener("mousedown", handlePointerDown);
+  }, [openDesktopMenu]);
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+    setOpenMobileGroup(null);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,7 +169,10 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 z-50 w-full border-b border-[#D7CCC8]/30 bg-[#F7F5F0]/80 backdrop-blur-sm transition-all duration-300">
+    <nav
+      ref={navRef}
+      className="fixed top-0 z-50 w-full border-b border-[#D7CCC8]/30 bg-[#F7F5F0]/80 backdrop-blur-sm transition-all duration-300"
+    >
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
         <Link
           href="/"
@@ -125,17 +181,79 @@ export default function Navbar() {
           星火
         </Link>
 
-        <div className="hidden items-center space-x-8 md:flex lg:space-x-12">
-          {navItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="group relative font-youyou text-base tracking-wide text-[#5D5D5D] transition-colors duration-300 hover:text-[#3A3A3A] lg:text-lg"
-            >
-              {item.name}
-              <span className="absolute -bottom-2 left-1/2 h-[1px] w-0 bg-[#A1887F] transition-all duration-300 ease-out group-hover:left-0 group-hover:w-full" />
-            </Link>
-          ))}
+        <div className="hidden items-center space-x-6 md:flex lg:space-x-8">
+          {primaryNavItems.map((item) =>
+            isNavGroup(item) ? (
+              <div
+                key={item.name}
+                className="relative"
+              >
+                <button
+                  type="button"
+                  className="group inline-flex items-center gap-1.5 font-youyou text-base tracking-wide text-[#5D5D5D] transition-colors duration-300 hover:text-[#3A3A3A] lg:text-lg"
+                  aria-expanded={openDesktopMenu === item.name}
+                  aria-haspopup="menu"
+                  onClick={() =>
+                    setOpenDesktopMenu((current) => (current === item.name ? null : item.name))
+                  }
+                >
+                  <span className="relative">
+                    {item.name}
+                    <span className="absolute -bottom-2 left-1/2 h-[1px] w-0 bg-[#A1887F] transition-all duration-300 ease-out group-hover:left-0 group-hover:w-full" />
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform duration-300 ${
+                      openDesktopMenu === item.name ? "rotate-180" : ""
+                    }`}
+                    strokeWidth={1.5}
+                  />
+                </button>
+
+                <div
+                  className={`absolute left-1/2 top-full z-20 mt-4 -translate-x-1/2 transition-all duration-200 ${
+                    openDesktopMenu === item.name
+                      ? "visible translate-y-0 opacity-100"
+                      : "pointer-events-none invisible -translate-y-2 opacity-0"
+                  }`}
+                >
+                  <div
+                    className={`rounded-[1.75rem] border border-[#E5D8D1] bg-[rgba(255,252,249,0.96)] p-3 shadow-[0_24px_60px_rgba(58,58,58,0.12)] backdrop-blur-sm ${
+                      item.items.length > 1 ? "w-[28rem]" : "w-64"
+                    }`}
+                  >
+                    <div className={item.items.length > 1 ? "grid grid-cols-2 gap-2" : "grid gap-2"}>
+                      {item.items.map((subItem) => (
+                        <Link
+                          key={subItem.name}
+                          href={subItem.href}
+                          className="rounded-2xl px-4 py-3 text-left transition-colors duration-200 hover:bg-[#F3ECE6]"
+                          onClick={() => setOpenDesktopMenu(null)}
+                        >
+                          <p className="font-youyou text-lg tracking-[0.08em] text-[#3A3A3A]">
+                            {subItem.name}
+                          </p>
+                          {subItem.subtitle ? (
+                            <p className="mt-1 text-xs tracking-[0.28em] text-[#9A8378]">
+                              {subItem.subtitle}
+                            </p>
+                          ) : null}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="group relative font-youyou text-base tracking-wide text-[#5D5D5D] transition-colors duration-300 hover:text-[#3A3A3A] lg:text-lg"
+              >
+                {item.name}
+                <span className="absolute -bottom-2 left-1/2 h-[1px] w-0 bg-[#A1887F] transition-all duration-300 ease-out group-hover:left-0 group-hover:w-full" />
+              </Link>
+            )
+          )}
         </div>
 
         <div className="hidden items-center space-x-6 md:flex lg:space-x-8">
@@ -187,7 +305,10 @@ export default function Navbar() {
           aria-label={isMobileMenuOpen ? "关闭导航菜单" : "打开导航菜单"}
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-navigation-drawer"
-          onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+          onClick={() => {
+            setOpenDesktopMenu(null);
+            setIsMobileMenuOpen((prev) => !prev);
+          }}
         >
           {isMobileMenuOpen ? (
             <X className="h-6 w-6" strokeWidth={1.75} />
@@ -227,16 +348,59 @@ export default function Navbar() {
             </form>
             
             <div className="flex flex-col gap-5">
-              {navItems.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={closeMobileMenu}
-                  className="font-youyou text-lg tracking-wide text-[#5D5D5D] transition-colors hover:text-[#3A3A3A]"
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {primaryNavItems.map((item) =>
+                isNavGroup(item) ? (
+                  <div key={item.name} className="rounded-3xl border border-[#E6DDD6] bg-white/55 px-4 py-3">
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between font-youyou text-lg tracking-wide text-[#5D5D5D]"
+                      aria-expanded={openMobileGroup === item.name}
+                      onClick={() =>
+                        setOpenMobileGroup((current) => (current === item.name ? null : item.name))
+                      }
+                    >
+                      <span>{item.name}</span>
+                      <ChevronRight
+                        className={`h-5 w-5 transition-transform duration-300 ${
+                          openMobileGroup === item.name ? "rotate-90" : ""
+                        }`}
+                        strokeWidth={1.5}
+                      />
+                    </button>
+
+                    {openMobileGroup === item.name ? (
+                      <div className="mt-3 flex flex-col gap-2 border-t border-[#E6DDD6] pt-3">
+                        {item.items.map((subItem) => (
+                          <Link
+                            key={subItem.name}
+                            href={subItem.href}
+                            onClick={closeMobileMenu}
+                            className="rounded-2xl px-3 py-2 transition-colors hover:bg-[#F3ECE6]"
+                          >
+                            <p className="font-youyou text-base tracking-[0.08em] text-[#3A3A3A]">
+                              {subItem.name}
+                            </p>
+                            {subItem.subtitle ? (
+                              <p className="mt-1 text-xs tracking-[0.24em] text-[#9A8378]">
+                                {subItem.subtitle}
+                              </p>
+                            ) : null}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={closeMobileMenu}
+                    className="font-youyou text-lg tracking-wide text-[#5D5D5D] transition-colors hover:text-[#3A3A3A]"
+                  >
+                    {item.name}
+                  </Link>
+                )
+              )}
             </div>
 
             <div className="mt-8 flex flex-col gap-4 border-t border-[#D7CCC8]/50 pt-6">
@@ -310,3 +474,4 @@ export default function Navbar() {
     </nav>
   );
 }
+

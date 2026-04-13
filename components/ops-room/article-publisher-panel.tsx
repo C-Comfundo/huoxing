@@ -18,6 +18,7 @@ import {
   uploadIssueCoverImage,
   updateArticlePublishedAt,
 } from '@/app/actions/articles-admin'
+import { ARTICLE_CATEGORY_OPTIONS } from '@/lib/article-categories'
 import { getIssueDisplayTitle } from '@/lib/issue-display'
 import { normalizeIssueLabel } from '@/lib/issue-display'
 
@@ -52,7 +53,7 @@ interface SelectedArticleTime {
 }
 
 const OPS_ROOM_ARTICLE_LOGIN_PATH = '/login?redirectTo=%2Fops-room%2Farticles'
-const ARTICLE_CATEGORIES = ['有话慢谈', '人间剧场', '胡说八道', '三行两句', '见字如面']
+const ARTICLE_CATEGORIES: string[] = ARTICLE_CATEGORY_OPTIONS.map(({ value }) => value)
 
 function formatDateTime(value: string | null) {
   if (!value) {
@@ -642,9 +643,9 @@ export default function ArticlePublisherPanel() {
                   onChange={(event) => setCategory(event.target.value)}
                   className="w-full rounded-xl border border-[#E8E4DF] bg-[#F7F5F0] px-4 py-3 text-[#3A3A3A] outline-none transition-colors focus:border-[#A1887F]"
                 >
-                  {ARTICLE_CATEGORIES.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
+                  {ARTICLE_CATEGORY_OPTIONS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
                     </option>
                   ))}
                 </select>
