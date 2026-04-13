@@ -50,11 +50,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
         </header>
         
         {results.length === 0 ? (
-          没有找到与 &quot;{query}&quot; 相关的文章
-
-            没有找到与 "{query}" 相关的文章
-          </div>
-        ) : (
+  <div className="rounded-[2rem] border border-[#E8E4DF] bg-white/70 px-8 py-14 text-center text-[#8D8D8D]">
+    没有找到与 &quot;{query}&quot; 相关的文章
+  </div>
+) : (
           <div className="space-y-8">
             {results.map((article) => (
               <Link 
