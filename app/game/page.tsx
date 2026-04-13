@@ -16,6 +16,19 @@ const gameEntries = [
     ],
     cta: "开始测试",
   },
+  {
+    title: "女性自证陷阱破局测试",
+    eyebrow: "暗黑互动测试",
+    description:
+      "在职场、生活与网络的典型场景里，识别那些让你不断自证的隐形陷阱，拆解叙事，找到更清醒的破局方式。",
+    href: "https://trap-quiz.aifnd.top/",
+    stats: [
+      { value: "3", label: "现实场景" },
+      { value: "暗黑", label: "体验氛围" },
+      { value: "互动", label: "测试形式" },
+    ],
+    cta: "开始破局",
+  },
 ] as const;
 
 export default function GamePage() {
@@ -31,7 +44,7 @@ export default function GamePage() {
               游戏
             </h1>
             <p className="max-w-2xl font-serif text-lg leading-loose text-[#645A54]">
-              这里会慢慢收纳互动叙事、小测试与那些需要你亲手参与的作品。先从第一张卡开始。
+              这里会慢慢收纳互动叙事、小测试与那些需要你亲手参与的作品。挑一张卡片，开始玩吧。
             </p>
           </div>
         </header>
