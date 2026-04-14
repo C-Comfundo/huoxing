@@ -156,10 +156,12 @@ function SectionCard({
                 </div>
               </>
             );
+            console.log("item.id", item.id); // Log the item to the consol
 
             return (
               <li
                 key={item.id}
+                id={item.id} // 添加 ID 属性
                 className="group/item py-1.5 min-h-[32px]"
               >
                 {item.customHref ? (
@@ -167,7 +169,7 @@ function SectionCard({
                     {innerContent}
                   </Link>
                 ) : item.articleSlug ? (
-                  <Link href={`/articles/${item.articleSlug}`} className="block w-full">
+                  <Link href={`/articles/${item.articleSlug}?articleId=${item.id}`} className="block w-full">
                     {innerContent}
                   </Link>
                 ) : (

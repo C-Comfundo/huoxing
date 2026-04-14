@@ -28,6 +28,10 @@ interface NavGroupItem {
 
 type PrimaryNavItem = NavLinkItem | NavGroupItem;
 
+interface NavbarProps {
+  articleId?: string; // 添加 articleId 参数
+}
+
 const primaryNavItems: PrimaryNavItem[] = [
   {
     name: "文字",
@@ -60,7 +64,7 @@ function isNavGroup(item: PrimaryNavItem): item is NavGroupItem {
   return "items" in item;
 }
 
-export default function Navbar() {
+export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
   const navRef = useRef<HTMLElement>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openDesktopMenu, setOpenDesktopMenu] = useState<string | null>(null);
@@ -175,7 +179,7 @@ export default function Navbar() {
     >
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
         <Link
-          href="/"
+          href={articleId ? `/#${articleId}` : "/"} // 使用 articleId 构建链接
           className="flex-shrink-0 font-youyou text-2xl tracking-widest text-[#3A3A3A] transition-opacity hover:opacity-80 md:text-3xl"
         >
           星火

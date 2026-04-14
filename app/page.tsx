@@ -6,6 +6,7 @@ import { getDebateTopicTiming, type DebateTopicStatus } from "@/lib/debate-sched
 import { getDebateTopicSummariesByIssueId } from "@/lib/debates";
 import { getIssueTOC } from "@/lib/issue-toc";
 import { getPreferredPublicImagePath } from "@/lib/public-assets";
+import ScrollToAnchor from '@/components/ScrollToAnchor';
 
 export const revalidate = 60;
 
@@ -46,7 +47,8 @@ export default async function Home() {
 
   return (
     <main className="relative min-h-screen bg-[#F7F5F0]">
-      <Navbar />
+      <Navbar />      
+      <ScrollToAnchor />
 
       <div className="relative z-0 animate-fade-in">
         <div className="relative top-0 flex w-full flex-col justify-start overflow-visible md:sticky md:h-[100svh] md:-z-10 md:overflow-hidden">
