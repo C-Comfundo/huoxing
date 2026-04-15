@@ -61,6 +61,7 @@ export default function Hero({ coverImage }: HeroProps) {
                   height={1131}
                   className="w-full h-auto block"
                   priority
+                  unoptimized
                 />
               </div>
             </div>
