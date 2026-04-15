@@ -29,6 +29,7 @@ interface ArticleDetailProps {
   backHref?: string;
   backLabel?: string;
   fallbackCategory?: string;
+  articleId?: string; // 添加 articleId 参数
 }
 
 function formatDate(input: string): string {
@@ -56,6 +57,7 @@ export default async function ArticleDetail({
   backHref,
   backLabel,
   fallbackCategory = "未分类",
+  articleId, // 接收 articleId
 }: ArticleDetailProps) {
   const article = await getArticleBySlug(slug);
 
@@ -80,12 +82,12 @@ export default async function ArticleDetail({
   const category = article.category || fallbackCategory;
   const plainTextContent = normalizePlainText(article.content);
   const shouldUseHtml = hasHtmlTags(article.content);
-  const resolvedBackHref = backHref ?? getIssueHref(article.issue);
+  const resolvedBackHref = backHref ?? `${getIssueHref(article.issue)}#article-${article.slug}`;
   const resolvedBackLabel = backLabel ?? (article.issue ? "返回本期" : "返回列表");
 
   return (
     <main className="min-h-screen bg-[#F7F5F0]">
-      <Navbar />
+      <Navbar articleId={articleId} /> {/* 传递 articleId 给 Navbar */}
       <ViewTracker
         endpoint={`/api/articles/${article.id}/view`}
         storageKey={`viewed:article:${article.id}`}
@@ -141,7 +143,7 @@ export default async function ArticleDetail({
         {article.issue ? (
           <div className="mt-12 flex justify-center">
             <Link
-              href={getIssueHref(article.issue)}
+              href={`${getIssueHref(article.issue)}#article-${article.slug}`}
               className="inline-flex items-center rounded-full border border-[#D7CCC8] px-5 py-2 text-sm text-[#7C746D] transition-colors hover:border-[#A1887F] hover:text-[#A1887F]"
             >
               返回 {article.issue.label} 专题页

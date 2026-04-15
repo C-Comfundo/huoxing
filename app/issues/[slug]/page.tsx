@@ -115,12 +115,13 @@ function IssueCategorySection({
 
       <div className={cardGridClassName}>
         {categoryArticles.map((article) => (
-          <ArticleCard
-            key={article.id}
-            article={article}
-            showReadMore
-            extendedCategoryLabel
-          />
+          <div key={article.id} id={`article-${article.slug}`} className="scroll-mt-32">
+            <ArticleCard
+              article={article}
+              showReadMore
+              extendedCategoryLabel
+            />
+          </div>
         ))}
       </div>
     </section>
