@@ -4,6 +4,7 @@ import type { MutableRefObject, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Heart, X, ThumbsDown } from "lucide-react";
+import { usePathname } from "next/navigation";
 import {
   createDebateComment,
   deleteDebateComment,
@@ -589,6 +590,11 @@ function formatTime(seconds: number) {
     setStatusMessage(message);
   };
 
+  const pathname = usePathname();
+  const redirectToLogin = () => {
+    window.location.href = `/login?redirectTo=${encodeURIComponent(pathname)}`;
+  };
+
   const handleShowMore = (side: Stance) => {
     setVisibleCounts((currentCounts) => ({
       ...currentCounts,
@@ -628,7 +634,7 @@ function formatTime(seconds: number) {
   }
 
   if (!isLoggedIn) {
-    showStatus("请先登录后再发言。", "error");
+    redirectToLogin();
     return;
   }
 
@@ -656,7 +662,7 @@ function formatTime(seconds: number) {
   }
 
   if (!isLoggedIn) {
-    showStatus("请先登录后再发言。", "error");
+    redirectToLogin();
     return;
   }
 
@@ -746,7 +752,7 @@ function formatTime(seconds: number) {
 
   const handleToggleLike = (comment: DebateComment) => {
     if (!isLoggedIn) {
-      showStatus("请先登录后再点赞。", "error");
+      redirectToLogin();
       return;
     }
 
@@ -787,7 +793,7 @@ function formatTime(seconds: number) {
 
   const handleToggleDislike = (comment: DebateComment) => {
     if (!isLoggedIn) {
-      showStatus("请先登录后再踩。", "error");
+      redirectToLogin();
       return;
     }
 
