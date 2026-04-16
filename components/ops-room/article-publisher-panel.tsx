@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, FilePlus2, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import IssueDebateTopicsManager from '@/components/ops-room/issue-debate-topics-manager'
 import IssueDrawingManager from '@/components/ops-room/issue-drawing-manager'
+import IssueTocManager from '@/components/ops-room/issue-toc-manager'
 import {
   createAdminArticle,
   createAdminIssue,
@@ -1269,6 +1270,11 @@ export default function ArticlePublisherPanel() {
             loginPath={OPS_ROOM_ARTICLE_LOGIN_PATH}
           />
         </section>
+
+        <IssueTocManager
+          issues={issues}
+          loginPath={OPS_ROOM_ARTICLE_LOGIN_PATH}
+        />
 
         <IssueDrawingManager
           issues={issues}

@@ -42,21 +42,21 @@ function isDrawingSection(displayName: string) {
   return displayName.includes("画里有话") || displayName.includes("画里话外");
 }
 
-function getDrawingTocOverride(row: RawItemRow | null | undefined) {
-  if (!row) {
+function getDrawingTocOverride(rows: RawItemRow[]) {
+  if (rows.length === 0) {
     return null;
   }
 
-  const title = toText(row.title).trim();
-  const author = toText(row.author_name).trim() || toText(row.author_handle).trim();
+  const titles = rows.map((r) => toText(r.title).trim()).filter(Boolean);
+  const authors = rows.map((r) => toText(r.author_name).trim() || toText(r.author_handle).trim() || "\u533F\u540D");
 
-  if (!title) {
+  if (titles.length === 0) {
     return null;
   }
 
   return {
-    title,
-    author,
+    title: titles.join(" / "),
+    author: authors.join(" / "),
   };
 }
 
@@ -99,17 +99,17 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
   let drawingOverride: { title: string; author: string } | null = null;
 
   if (hasDrawingSection) {
-    const { data: drawingRow, error: drawingError } = await supabase
+    const { data: drawingRows, error: drawingError } = await supabase
       .from("issue_drawings")
-      .select("title, author_name, author_handle")
+      .select("title, author_name, author_handle, sort_order")
       .eq("issue_id", issueId)
-      .maybeSingle();
+      .order("sort_order", { ascending: true });
 
     if (drawingError) {
       console.error("[getIssueTOC] 获取画里有话内容失败:", drawingError);
     } else {
       drawingOverride = getDrawingTocOverride(
-        (drawingRow as RawItemRow | null | undefined) ?? null
+        (drawingRows as RawItemRow[] | null) ?? []
       );
     }
   }
