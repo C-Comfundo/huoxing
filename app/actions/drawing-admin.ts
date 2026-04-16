@@ -13,6 +13,8 @@ interface ActionResult<T = null> {
 
 interface SaveAdminIssueDrawingInput {
   issueId: string
+  drawingId?: string
+  sortOrder?: number
   title: string
   authorHandle?: string
   authorName?: string
@@ -33,6 +35,7 @@ export interface AdminIssueDrawing {
   id: string | null
   issueId: string
   issueSlug: string
+  sortOrder: number
   title: string
   authorName: string
   authorHandle: string
@@ -51,6 +54,7 @@ const DRAWING_SELECT = `
   author_name,
   author_handle,
   description,
+  sort_order,
   created_at,
   updated_at
 `
@@ -220,53 +224,50 @@ async function loadDrawingImages(
   return ((data as RawRow[] | null) ?? []).map(mapDrawingImage)
 }
 
-async function buildAdminIssueDrawing(
+async function buildAdminIssueDrawings(
   adminClient: ReturnType<typeof createAdminClient>,
   issueId: string,
   issueSlug: string
-): Promise<AdminIssueDrawing> {
+): Promise<AdminIssueDrawing[]> {
   const { data, error } = await adminClient
     .from('issue_drawings')
     .select(DRAWING_SELECT)
     .eq('issue_id', issueId)
-    .maybeSingle()
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
 
   if (error) {
     throw error
   }
 
-  const row = (data as RawRow | null) ?? null
+  const rows = (data as RawRow[] | null) ?? []
 
-  if (!row) {
-    return {
-      id: null,
+  if (rows.length === 0) {
+    return []
+  }
+
+  const drawings: AdminIssueDrawing[] = []
+
+  for (const row of rows) {
+    const drawingId = String(row.id ?? '')
+    const images = drawingId ? await loadDrawingImages(adminClient, drawingId) : []
+
+    drawings.push({
+      id: drawingId || null,
       issueId,
       issueSlug,
-      title: '画里有话',
-      authorName: '',
-      authorHandle: '',
-      description: '',
-      createdAt: null,
-      updatedAt: null,
-      images: [],
-    }
+      sortOrder: Number(row.sort_order ?? 0),
+      title: toText(row.title) || '画里有话',
+      authorName: toText(row.author_name),
+      authorHandle: toText(row.author_handle),
+      description: toText(row.description),
+      createdAt: toText(row.created_at) || null,
+      updatedAt: toText(row.updated_at) || null,
+      images,
+    })
   }
 
-  const drawingId = String(row.id ?? '')
-  const images = drawingId ? await loadDrawingImages(adminClient, drawingId) : []
-
-  return {
-    id: drawingId || null,
-    issueId,
-    issueSlug,
-    title: toText(row.title) || '画里有话',
-    authorName: toText(row.author_name),
-    authorHandle: toText(row.author_handle),
-    description: toText(row.description),
-    createdAt: toText(row.created_at) || null,
-    updatedAt: toText(row.updated_at) || null,
-    images,
-  }
+  return drawings
 }
 
 function revalidateDrawingPaths(issueSlug: string) {
@@ -279,11 +280,9 @@ function revalidateDrawingPaths(issueSlug: string) {
   revalidatePath(`/issues/${issueSlug}/drawing`)
 }
 
-async function syncIssueDrawingTocItem(
+async function syncIssueDrawingTocItems(
   adminClient: ReturnType<typeof createAdminClient>,
-  issueId: string,
-  title: string,
-  author: string
+  issueId: string
 ) {
   const { data: sectionRows, error: sectionError } = await adminClient
     .from('issue_toc_sections')
@@ -291,7 +290,7 @@ async function syncIssueDrawingTocItem(
     .eq('issue_id', issueId)
 
   if (sectionError) {
-    console.error('[syncIssueDrawingTocItem] Failed to load TOC sections:', sectionError)
+    console.error('[syncIssueDrawingTocItems] Failed to load TOC sections:', sectionError)
     return
   }
 
@@ -305,6 +304,26 @@ async function syncIssueDrawingTocItem(
     return
   }
 
+  // Load all drawings for this issue to build TOC entries
+  const { data: drawingRows, error: drawingError } = await adminClient
+    .from('issue_drawings')
+    .select('title, author_name, author_handle, sort_order')
+    .eq('issue_id', issueId)
+    .order('sort_order', { ascending: true })
+
+  if (drawingError) {
+    console.error('[syncIssueDrawingTocItems] Failed to load drawings:', drawingError)
+    return
+  }
+
+  const drawings = (drawingRows as RawRow[] | null) ?? []
+
+  // Build a combined title/author from all drawings
+  const titles = drawings.map((d) => toText(d.title)).filter(Boolean)
+  const authors = drawings.map((d) => toText(d.author_name) || toText(d.author_handle) || '匿名')
+  const combinedTitle = titles.join(' / ') || '画里有话'
+  const combinedAuthor = authors.join(' / ') || '匿名'
+
   const { data: itemRow, error: itemError } = await adminClient
     .from('issue_toc_items')
     .select('id')
@@ -314,13 +333,13 @@ async function syncIssueDrawingTocItem(
     .maybeSingle()
 
   if (itemError) {
-    console.error('[syncIssueDrawingTocItem] Failed to load TOC item:', itemError)
+    console.error('[syncIssueDrawingTocItems] Failed to load TOC item:', itemError)
     return
   }
 
   const payload = {
-    title,
-    author: author || '匿名',
+    title: combinedTitle,
+    author: combinedAuthor,
   }
 
   if (itemRow?.id) {
@@ -330,7 +349,7 @@ async function syncIssueDrawingTocItem(
       .eq('id', itemRow.id)
 
     if (updateError) {
-      console.error('[syncIssueDrawingTocItem] Failed to update TOC item:', updateError)
+      console.error('[syncIssueDrawingTocItems] Failed to update TOC item:', updateError)
     }
 
     return
@@ -344,15 +363,15 @@ async function syncIssueDrawingTocItem(
   })
 
   if (insertError) {
-    console.error('[syncIssueDrawingTocItem] Failed to insert TOC item:', insertError)
+    console.error('[syncIssueDrawingTocItems] Failed to insert TOC item:', insertError)
   }
 }
 
 export async function getAdminIssueDrawing(
   issueId: string
-): Promise<ActionResult<AdminIssueDrawing>> {
+): Promise<ActionResult<AdminIssueDrawing[]>> {
   try {
-    const adminAccess = await requireDrawingAdmin<AdminIssueDrawing>()
+    const adminAccess = await requireDrawingAdmin<AdminIssueDrawing[]>()
     if (!adminAccess.ok) {
       return adminAccess.result
     }
@@ -379,7 +398,7 @@ export async function getAdminIssueDrawing(
     return {
       success: true,
       message: '已加载画里有话内容。',
-      data: await buildAdminIssueDrawing(adminClient, issue.id, issue.slug),
+      data: await buildAdminIssueDrawings(adminClient, issue.id, issue.slug),
     }
   } catch (error) {
     console.error('[getAdminIssueDrawing] Unexpected error:', error)
@@ -393,14 +412,16 @@ export async function getAdminIssueDrawing(
 
 export async function saveAdminIssueDrawing(
   input: SaveAdminIssueDrawingInput
-): Promise<ActionResult<AdminIssueDrawing>> {
+): Promise<ActionResult<AdminIssueDrawing[]>> {
   try {
-    const adminAccess = await requireDrawingAdmin<AdminIssueDrawing>()
+    const adminAccess = await requireDrawingAdmin<AdminIssueDrawing[]>()
     if (!adminAccess.ok) {
       return adminAccess.result
     }
 
     const issueId = input.issueId.trim()
+    const drawingId = input.drawingId?.trim() || ''
+    const sortOrder = input.sortOrder ?? 0
     const title = input.title.trim()
     const authorName = trimOptionalText(input.authorName)
     const authorHandle = trimOptionalText(input.authorHandle)
@@ -425,16 +446,6 @@ export async function saveAdminIssueDrawing(
       }
     }
 
-    const { data: existingRow, error: existingError } = await adminClient
-      .from('issue_drawings')
-      .select('id')
-      .eq('issue_id', issueId)
-      .maybeSingle()
-
-    if (existingError) {
-      throw existingError
-    }
-
     const payload = {
       title,
       author_name: authorName,
@@ -442,18 +453,23 @@ export async function saveAdminIssueDrawing(
       description,
     }
 
-    if (existingRow?.id) {
+    let isUpdate = false
+
+    if (drawingId) {
       const { error: updateError } = await adminClient
         .from('issue_drawings')
         .update(payload)
-        .eq('id', existingRow.id)
+        .eq('id', drawingId)
 
       if (updateError) {
         throw updateError
       }
+
+      isUpdate = true
     } else {
       const { error: insertError } = await adminClient.from('issue_drawings').insert({
         issue_id: issueId,
+        sort_order: sortOrder,
         ...payload,
       })
 
@@ -462,20 +478,15 @@ export async function saveAdminIssueDrawing(
       }
     }
 
-    await syncIssueDrawingTocItem(
-      adminClient,
-      issueId,
-      title,
-      authorName || authorHandle || '匿名'
-    )
+    await syncIssueDrawingTocItems(adminClient, issueId)
 
-    const drawing = await buildAdminIssueDrawing(adminClient, issueId, issue.slug)
+    const drawings = await buildAdminIssueDrawings(adminClient, issueId, issue.slug)
     revalidateDrawingPaths(issue.slug)
 
     return {
       success: true,
-      message: existingRow?.id ? '画里有话内容已更新。' : '画里有话内容已创建。',
-      data: drawing,
+      message: isUpdate ? '画里有话内容已更新。' : '画里有话内容已创建。',
+      data: drawings,
     }
   } catch (error) {
     console.error('[saveAdminIssueDrawing] Unexpected error:', error)
@@ -488,20 +499,20 @@ export async function saveAdminIssueDrawing(
 }
 
 export async function uploadAdminIssueDrawingImages(
-  issueId: string,
+  drawingId: string,
   formData: FormData
-): Promise<ActionResult<AdminIssueDrawing>> {
+): Promise<ActionResult<AdminIssueDrawing[]>> {
   try {
-    const adminAccess = await requireDrawingAdmin<AdminIssueDrawing>()
+    const adminAccess = await requireDrawingAdmin<AdminIssueDrawing[]>()
     if (!adminAccess.ok) {
       return adminAccess.result
     }
 
-    if (!issueId) {
+    if (!drawingId) {
       return {
         success: false,
-        message: '缺少期号 ID。',
-        error: 'MISSING_ISSUE_ID',
+        message: '缺少作品 ID。',
+        error: 'MISSING_DRAWING_ID',
       }
     }
 
@@ -528,20 +539,11 @@ export async function uploadAdminIssueDrawingImages(
     }
 
     const adminClient = createAdminClient()
-    const issue = await loadIssue(adminClient, issueId)
-
-    if (!issue) {
-      return {
-        success: false,
-        message: '未找到对应期刊。',
-        error: 'ISSUE_NOT_FOUND',
-      }
-    }
 
     const { data: drawingRow, error: drawingError } = await adminClient
       .from('issue_drawings')
-      .select('id, title')
-      .eq('issue_id', issueId)
+      .select('id, issue_id, title')
+      .eq('id', drawingId)
       .maybeSingle()
 
     if (drawingError) {
@@ -556,13 +558,24 @@ export async function uploadAdminIssueDrawingImages(
       }
     }
 
-    const drawingId = String(drawingRow.id ?? '')
+    const issueId = String(drawingRow.issue_id ?? '')
+    const issue = await loadIssue(adminClient, issueId)
+
+    if (!issue) {
+      return {
+        success: false,
+        message: '未找到对应期刊。',
+        error: 'ISSUE_NOT_FOUND',
+      }
+    }
+
+    const currentDrawingId = String(drawingRow.id ?? '')
     const drawingTitle = toText(drawingRow.title) || '画里有话'
 
     const { data: maxSortRow, error: maxSortError } = await adminClient
       .from('issue_drawing_images')
       .select('sort_order')
-      .eq('drawing_id', drawingId)
+      .eq('drawing_id', currentDrawingId)
       .order('sort_order', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -593,7 +606,7 @@ export async function uploadAdminIssueDrawingImages(
       .from('issue_drawing_images')
       .insert(
         imageDrafts.map((draft, index) => ({
-          drawing_id: drawingId,
+          drawing_id: currentDrawingId,
           image_url: draft.publicUrl,
           alt_text: `${drawingTitle} ${baseSortOrder + index + 1}`,
           caption: null,
@@ -658,13 +671,13 @@ export async function uploadAdminIssueDrawingImages(
       uploadedPaths.push(draft.filePath)
     }
 
-    const drawing = await buildAdminIssueDrawing(adminClient, issueId, issue.slug)
+    const drawings = await buildAdminIssueDrawings(adminClient, issueId, issue.slug)
     revalidateDrawingPaths(issue.slug)
 
     return {
       success: true,
       message: `已上传 ${fileEntries.length} 张画作图片。`,
-      data: drawing,
+      data: drawings,
     }
   } catch (error) {
     console.error('[uploadAdminIssueDrawingImages] Unexpected error:', error)
@@ -678,9 +691,9 @@ export async function uploadAdminIssueDrawingImages(
 
 export async function deleteAdminIssueDrawingImage(
   imageId: string
-): Promise<ActionResult<AdminIssueDrawing>> {
+): Promise<ActionResult<AdminIssueDrawing[]>> {
   try {
-    const adminAccess = await requireDrawingAdmin<AdminIssueDrawing>()
+    const adminAccess = await requireDrawingAdmin<AdminIssueDrawing[]>()
     if (!adminAccess.ok) {
       return adminAccess.result
     }
@@ -772,7 +785,7 @@ export async function deleteAdminIssueDrawingImage(
       }
     }
 
-    const drawing = await buildAdminIssueDrawing(adminClient, issueId, issue.slug)
+    const drawings = await buildAdminIssueDrawings(adminClient, issueId, issue.slug)
     revalidateDrawingPaths(issue.slug)
 
     return {
@@ -780,7 +793,7 @@ export async function deleteAdminIssueDrawingImage(
       message: storageDeleteWarning
         ? '图片已从页面移除，但存储文件删除失败，请稍后检查 Supabase Storage。'
         : '图片已删除。',
-      data: drawing,
+      data: drawings,
     }
   } catch (error) {
     console.error('[deleteAdminIssueDrawingImage] Unexpected error:', error)

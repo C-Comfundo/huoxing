@@ -10,7 +10,7 @@ import {
   getIssuePageCategoryHeadingParts,
   groupArticlesByCategory,
 } from "@/lib/articles";
-import { getIssueDrawingByIssueId } from "@/lib/issue-drawings";
+import { getIssueDrawingsByIssueId } from "@/lib/issue-drawings";
 import { getIssueDisplayTitle } from "@/lib/issue-display";
 
 export const revalidate = 60;
@@ -136,15 +136,15 @@ export default async function IssueDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [articles, drawing] = await Promise.all([
+  const [articles, drawings] = await Promise.all([
     getArticlesByIssue(issue.id),
-    getIssueDrawingByIssueId(issue.id),
+    getIssueDrawingsByIssueId(issue.id),
   ]);
 
-  // Inject drawing as a pseudo-article card at the end of the list.
+  // Inject drawings as pseudo-article cards at the end of the list.
   const allArticles: Article[] = [...articles];
 
-  if (drawing) {
+  for (const drawing of drawings) {
     const drawingCardAuthor =
       drawing.authorName?.trim() ||
       drawing.authorHandle?.trim() ||

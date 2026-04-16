@@ -179,57 +179,71 @@ function sortIssuesDescending(left: IssueDrawingIssue, right: IssueDrawingIssue)
   return rightTime - leftTime;
 }
 
-export async function getIssueDrawingByIssueId(issueId: string): Promise<IssueDrawing | null> {
+export async function getIssueDrawingsByIssueId(issueId: string): Promise<IssueDrawing[]> {
   if (!issueId) {
-    return null;
+    return [];
   }
 
-  const { data: drawingRow, error: drawingError } = await runPublicQuery<RawRow>((db) =>
-    db.from("issue_drawings").select(ISSUE_DRAWING_SELECT).eq("issue_id", issueId).maybeSingle()
+  const { data: drawingRows, error: drawingError } = await runPublicQuery<RawRow[]>((db) =>
+    db
+      .from("issue_drawings")
+      .select(ISSUE_DRAWING_SELECT)
+      .eq("issue_id", issueId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
   );
 
   if (drawingError) {
-    console.error("[getIssueDrawingByIssueId] Failed to load drawing:", drawingError);
-    return null;
+    console.error("[getIssueDrawingsByIssueId] Failed to load drawings:", drawingError);
+    return [];
   }
 
-  if (!drawingRow) {
-    return null;
+  if (!drawingRows || drawingRows.length === 0) {
+    return [];
   }
 
-  const drawingId = String(drawingRow.id ?? "");
-  const [{ data: imageRows, error: imageError }, { count: commentCount, error: commentError }] =
-    await Promise.all([
-      runPublicQuery<RawRow[]>((db) =>
-        db
-          .from("issue_drawing_images")
-          .select(ISSUE_DRAWING_IMAGE_SELECT)
-          .eq("drawing_id", drawingId)
-          .order("sort_order", { ascending: true })
-          .order("created_at", { ascending: true })
-      ),
-      runPublicQuery<null>((db) =>
-        db
-          .from("issue_drawing_comments")
-          .select("id", { count: "exact", head: true })
-          .eq("issue_id", issueId)
-      ),
-    ]);
+  const drawings: IssueDrawing[] = [];
 
-  if (imageError) {
-    console.error("[getIssueDrawingByIssueId] Failed to load drawing images:", imageError);
-    return null;
+  for (const drawingRow of drawingRows) {
+    const drawingId = String(drawingRow.id ?? "");
+
+    const [{ data: imageRows, error: imageError }, { count: commentCount, error: commentError }] =
+      await Promise.all([
+        runPublicQuery<RawRow[]>((db) =>
+          db
+            .from("issue_drawing_images")
+            .select(ISSUE_DRAWING_IMAGE_SELECT)
+            .eq("drawing_id", drawingId)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true })
+        ),
+        runPublicQuery<null>((db) =>
+          db
+            .from("issue_drawing_comments")
+            .select("id", { count: "exact", head: true })
+            .eq("drawing_id", drawingId)
+        ),
+      ]);
+
+    if (imageError) {
+      console.error("[getIssueDrawingsByIssueId] Failed to load drawing images:", imageError);
+      continue;
+    }
+
+    if (commentError) {
+      console.error("[getIssueDrawingsByIssueId] Failed to load drawing comment count:", commentError);
+    }
+
+    drawings.push(
+      mapIssueDrawing(
+        drawingRow,
+        (imageRows ?? []).map(mapIssueDrawingImage),
+        Number(commentCount ?? 0)
+      )
+    );
   }
 
-  if (commentError) {
-    console.error("[getIssueDrawingByIssueId] Failed to load drawing comment count:", commentError);
-  }
-
-  return mapIssueDrawing(
-    drawingRow,
-    (imageRows ?? []).map(mapIssueDrawingImage),
-    Number(commentCount ?? 0)
-  );
+  return drawings;
 }
 
 export async function hasIssueDrawing(issueId: string): Promise<boolean> {
@@ -237,8 +251,8 @@ export async function hasIssueDrawing(issueId: string): Promise<boolean> {
     return false;
   }
 
-  const { data, error } = await runPublicQuery<RawRow>((db) =>
-    db.from("issue_drawings").select("id").eq("issue_id", issueId).maybeSingle()
+  const { data, error } = await runPublicQuery<RawRow[]>((db) =>
+    db.from("issue_drawings").select("id").eq("issue_id", issueId).limit(1)
   );
 
   if (error) {
@@ -246,7 +260,7 @@ export async function hasIssueDrawing(issueId: string): Promise<boolean> {
     return false;
   }
 
-  return Boolean(data);
+  return Boolean(data && data.length > 0);
 }
 
 export async function getLatestIssueWithDrawing(): Promise<IssueDrawingIssue | null> {

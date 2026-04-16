@@ -11,6 +11,7 @@ import {
 interface DrawingCommentSectionProps {
   issueId: string;
   issueSlug: string;
+  drawingId: string;
   isLoggedIn: boolean;
   initialComments: DrawingComment[];
 }
@@ -30,6 +31,7 @@ function formatDate(input: string): string {
 export default function DrawingCommentSection({
   issueId,
   issueSlug,
+  drawingId,
   isLoggedIn,
   initialComments,
 }: DrawingCommentSectionProps) {
@@ -52,6 +54,7 @@ export default function DrawingCommentSection({
       const result = await submitDrawingComment({
         issueId,
         issueSlug,
+        drawingId,
         content: trimmed,
         isAnonymous: anonymous,
       });

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Brush, ImagePlus, Loader2, RefreshCw, Save, Trash2 } from 'lucide-react'
+import { Brush, ImagePlus, Loader2, Plus, RefreshCw, Save, Trash2 } from 'lucide-react'
 import {
   deleteAdminIssueDrawingImage,
   getAdminIssueDrawing,
@@ -52,13 +52,30 @@ function getIssueStatusLabel(issue: DrawingManagerIssue | null) {
   return publishedTime <= Date.now() ? '已上线' : '定时中'
 }
 
+function makeEmptyDrawing(issueId: string, issueSlug: string, sortOrder: number): AdminIssueDrawing {
+  return {
+    id: null,
+    issueId,
+    issueSlug,
+    sortOrder,
+    title: '画里有话',
+    authorName: '',
+    authorHandle: '',
+    description: '',
+    createdAt: null,
+    updatedAt: null,
+    images: [],
+  }
+}
+
 export default function IssueDrawingManager({
   issues,
   loginPath,
 }: IssueDrawingManagerProps) {
   const router = useRouter()
   const [selectedIssueId, setSelectedIssueId] = useState('')
-  const [drawing, setDrawing] = useState<AdminIssueDrawing | null>(null)
+  const [drawings, setDrawings] = useState<AdminIssueDrawing[]>([])
+  const [activeTab, setActiveTab] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -67,6 +84,7 @@ export default function IssueDrawingManager({
   const [isError, setIsError] = useState(false)
 
   const selectedIssue = issues.find((issue) => issue.id === selectedIssueId) ?? null
+  const activeDrawing = drawings[activeTab] ?? null
 
   const handleGuardFailure = useCallback(
     (error?: string, fallbackMessage?: string) => {
@@ -85,10 +103,10 @@ export default function IssueDrawingManager({
     [loginPath, router]
   )
 
-  const loadDrawing = useCallback(
+  const loadDrawings = useCallback(
     async (issueId: string) => {
       if (!issueId) {
-        setDrawing(null)
+        setDrawings([])
         setLoading(false)
         return
       }
@@ -102,7 +120,8 @@ export default function IssueDrawingManager({
         return
       }
 
-      setDrawing(result.data ?? null)
+      setDrawings(result.data ?? [])
+      setActiveTab(0)
       setLoading(false)
     },
     [handleGuardFailure]
@@ -119,20 +138,33 @@ export default function IssueDrawingManager({
       return
     }
 
-    void loadDrawing(selectedIssueId)
-  }, [loadDrawing, selectedIssueId])
+    void loadDrawings(selectedIssueId)
+  }, [loadDrawings, selectedIssueId])
 
   const updateDrawingField = useCallback(
     (field: keyof Pick<AdminIssueDrawing, 'title' | 'authorName' | 'authorHandle' | 'description'>, value: string) => {
-      setDrawing((current) => (current ? { ...current, [field]: value } : current))
+      setDrawings((current) =>
+        current.map((d, i) => (i === activeTab ? { ...d, [field]: value } : d))
+      )
     },
-    []
+    [activeTab]
   )
+
+  const handleAddDrawing = () => {
+    if (!selectedIssue || drawings.length >= 2) {
+      return
+    }
+
+    const newSortOrder = drawings.length > 0 ? Math.max(...drawings.map((d) => d.sortOrder)) + 1 : 0
+    const newDrawing = makeEmptyDrawing(selectedIssueId, selectedIssue.slug, newSortOrder)
+    setDrawings((current) => [...current, newDrawing])
+    setActiveTab(drawings.length)
+  }
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    if (!drawing || !selectedIssueId) {
+    if (!activeDrawing || !selectedIssueId) {
       return
     }
 
@@ -142,10 +174,12 @@ export default function IssueDrawingManager({
 
     const result = await saveAdminIssueDrawing({
       issueId: selectedIssueId,
-      title: drawing.title,
-      authorName: drawing.authorName,
-      authorHandle: drawing.authorHandle,
-      description: drawing.description,
+      drawingId: activeDrawing.id ?? undefined,
+      sortOrder: activeDrawing.sortOrder,
+      title: activeDrawing.title,
+      authorName: activeDrawing.authorName,
+      authorHandle: activeDrawing.authorHandle,
+      description: activeDrawing.description,
     })
 
     if (!result.success) {
@@ -154,7 +188,9 @@ export default function IssueDrawingManager({
       return
     }
 
-    setDrawing(result.data ?? null)
+    setDrawings(result.data ?? [])
+    // keep activeTab in range
+    setActiveTab((prev) => Math.min(prev, (result.data ?? []).length - 1))
     setMessage(result.message)
     setIsError(false)
     setSaving(false)
@@ -168,7 +204,7 @@ export default function IssueDrawingManager({
       return
     }
 
-    if (!drawing?.id) {
+    if (!activeDrawing?.id) {
       setMessage('请先保存画里有话的标题与作者信息，再上传图片。')
       setIsError(true)
       return
@@ -183,7 +219,7 @@ export default function IssueDrawingManager({
       formData.append('files', file)
     }
 
-    const result = await uploadAdminIssueDrawingImages(selectedIssueId, formData)
+    const result = await uploadAdminIssueDrawingImages(activeDrawing.id, formData)
 
     if (!result.success) {
       handleGuardFailure(result.error, result.message)
@@ -191,7 +227,7 @@ export default function IssueDrawingManager({
       return
     }
 
-    setDrawing(result.data ?? null)
+    setDrawings(result.data ?? [])
     setMessage(result.message)
     setIsError(false)
     setUploading(false)
@@ -214,7 +250,7 @@ export default function IssueDrawingManager({
       return
     }
 
-    setDrawing(result.data ?? null)
+    setDrawings(result.data ?? [])
     setMessage(result.message)
     setIsError(false)
     setDeletingImageId('')
@@ -230,7 +266,7 @@ export default function IssueDrawingManager({
           <div>
             <h2 className="font-youyou text-2xl text-[#3A3A3A]">画里有话管理</h2>
             <p className="mt-1 text-sm text-[#8D8D8D]">
-              按期维护画作标题、作者、小红书 ID 和图片。保存后会同步前台详情页和当期目录展示。
+              按期维护画作标题、作者、小红书 ID 和图片。每期最多支持两个作品。
             </p>
           </div>
         </div>
@@ -256,7 +292,7 @@ export default function IssueDrawingManager({
             type="button"
             onClick={() => {
               if (selectedIssueId) {
-                void loadDrawing(selectedIssueId)
+                void loadDrawings(selectedIssueId)
               }
             }}
             disabled={loading || !selectedIssueId}
@@ -297,7 +333,7 @@ export default function IssueDrawingManager({
         </div>
       ) : null}
 
-      {loading || !drawing ? (
+      {loading ? (
         <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-[#E8E4DF] bg-[#FAF8F4] text-sm text-[#8D8D8D]">
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -305,153 +341,194 @@ export default function IssueDrawingManager({
           </div>
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <form onSubmit={handleSave} className="space-y-5 rounded-2xl border border-[#E8E4DF] bg-[#FCFBF8] p-5">
-            <div className="space-y-1">
-              <h3 className="font-youyou text-lg text-[#3A3A3A]">基本信息</h3>
-              <p className="text-sm text-[#8D8D8D]">
-                这里保存的是这一期“画里有话”的正式内容源，前台详情页和目录都从这里同步。
-              </p>
-            </div>
+        <>
+          {/* Tab bar for switching between artworks */}
+          <div className="mb-5 flex items-center gap-2">
+            {drawings.map((d, index) => (
+              <button
+                key={d.id ?? `new-${index}`}
+                type="button"
+                onClick={() => setActiveTab(index)}
+                className={`rounded-xl px-4 py-2 text-sm font-youyou transition-colors ${
+                  activeTab === index
+                    ? 'bg-[#3A3A3A] text-white'
+                    : 'border border-[#E8E4DF] bg-white text-[#5D5D5D] hover:border-[#A1887F] hover:text-[#A1887F]'
+                }`}
+              >
+                作品 {index + 1}{d.title && d.title !== '画里有话' ? ` · ${d.title}` : ''}
+              </button>
+            ))}
 
-            <div>
-              <label className="mb-2 block text-sm font-youyou text-[#5D5D5D]">标题</label>
-              <input
-                type="text"
-                value={drawing.title}
-                onChange={(event) => updateDrawingField('title', event.target.value)}
-                className="w-full rounded-xl border border-[#E8E4DF] bg-white px-4 py-3 text-[#3A3A3A] outline-none transition-colors focus:border-[#A1887F]"
-                placeholder="画里有话"
-                required
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-youyou text-[#5D5D5D]">作者</label>
-                <input
-                  type="text"
-                  value={drawing.authorName}
-                  onChange={(event) => updateDrawingField('authorName', event.target.value)}
-                  className="w-full rounded-xl border border-[#E8E4DF] bg-white px-4 py-3 text-[#3A3A3A] outline-none transition-colors focus:border-[#A1887F]"
-                  placeholder="作者名字"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-youyou text-[#5D5D5D]">小红书 ID</label>
-                <input
-                  type="text"
-                  value={drawing.authorHandle}
-                  onChange={(event) => updateDrawingField('authorHandle', event.target.value)}
-                  className="w-full rounded-xl border border-[#E8E4DF] bg-white px-4 py-3 text-[#3A3A3A] outline-none transition-colors focus:border-[#A1887F]"
-                  placeholder="小红书账号"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-youyou text-[#5D5D5D]">简介</label>
-              <textarea
-                value={drawing.description}
-                onChange={(event) => updateDrawingField('description', event.target.value)}
-                rows={4}
-                className="w-full rounded-xl border border-[#E8E4DF] bg-white px-4 py-3 text-[#3A3A3A] outline-none transition-colors focus:border-[#A1887F]"
-                placeholder="可选，前台标题下方会展示。"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#3A3A3A] px-5 py-3 text-sm text-white transition-colors hover:bg-[#2A2A2A] disabled:bg-[#8D8D8D]"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              <span>{saving ? '保存中...' : '保存基本信息'}</span>
-            </button>
-          </form>
-
-          <div className="space-y-5 rounded-2xl border border-[#E8E4DF] bg-[#FCFBF8] p-5">
-            <div className="space-y-1">
-              <h3 className="font-youyou text-lg text-[#3A3A3A]">画作图片</h3>
-              <p className="text-sm text-[#8D8D8D]">
-                图片会按上传顺序追加到前台轮播中。若是新一期，请先保存左侧基本信息，再开始上传。
-              </p>
-            </div>
-
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-[#D7CCC8] bg-white px-4 py-6 text-sm text-[#6C665F] transition-colors hover:border-[#A1887F] hover:text-[#A1887F]">
-              {uploading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ImagePlus className="h-4 w-4" />
-              )}
-              <span>{uploading ? '上传中...' : '选择并上传图片'}</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                disabled={uploading}
-                onChange={(event) => {
-                  void handleUpload(event)
-                }}
-                className="hidden"
-              />
-            </label>
-
-            {drawing.images.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-[#E8E4DF] bg-white/70 px-4 py-10 text-center text-sm text-[#8D8D8D]">
-                暂无已上传图片。
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {drawing.images.map((image, index) => {
-                  const isDeleting = deletingImageId === image.id
-
-                  return (
-                    <div
-                      key={image.id}
-                      className="overflow-hidden rounded-2xl border border-[#E8E4DF] bg-white"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={image.imageUrl}
-                        alt={image.altText || `${drawing.title} ${index + 1}`}
-                        className="h-48 w-full object-cover"
-                      />
-
-                      <div className="space-y-3 p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm text-[#3A3A3A]">
-                              第 {image.sortOrder + 1} 张
-                            </p>
-                            <p className="truncate text-xs text-[#8D8D8D]">
-                              {image.altText || '未设置替代文本'}
-                            </p>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => void handleDeleteImage(image.id)}
-                            disabled={isDeleting}
-                            className="inline-flex items-center gap-1 rounded-full border border-red-100 px-3 py-1.5 text-xs text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
-                          >
-                            {isDeleting ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                            <span>{isDeleting ? '删除中...' : '删除'}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+            {drawings.length < 2 ? (
+              <button
+                type="button"
+                onClick={handleAddDrawing}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-[#D7CCC8] px-4 py-2 text-sm text-[#8D8D8D] transition-colors hover:border-[#A1887F] hover:text-[#A1887F]"
+              >
+                <Plus className="h-4 w-4" />
+                <span>添加作品</span>
+              </button>
+            ) : null}
           </div>
-        </div>
+
+          {activeDrawing ? (
+            <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+              <form onSubmit={handleSave} className="space-y-5 rounded-2xl border border-[#E8E4DF] bg-[#FCFBF8] p-5">
+                <div className="space-y-1">
+                  <h3 className="font-youyou text-lg text-[#3A3A3A]">
+                    基本信息 · 作品 {activeTab + 1}
+                  </h3>
+                  <p className="text-sm text-[#8D8D8D]">
+                    这里保存的是这一期"画里有话"作品 {activeTab + 1} 的正式内容源。
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-youyou text-[#5D5D5D]">标题</label>
+                  <input
+                    type="text"
+                    value={activeDrawing.title}
+                    onChange={(event) => updateDrawingField('title', event.target.value)}
+                    className="w-full rounded-xl border border-[#E8E4DF] bg-white px-4 py-3 text-[#3A3A3A] outline-none transition-colors focus:border-[#A1887F]"
+                    placeholder="画里有话"
+                    required
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-youyou text-[#5D5D5D]">作者</label>
+                    <input
+                      type="text"
+                      value={activeDrawing.authorName}
+                      onChange={(event) => updateDrawingField('authorName', event.target.value)}
+                      className="w-full rounded-xl border border-[#E8E4DF] bg-white px-4 py-3 text-[#3A3A3A] outline-none transition-colors focus:border-[#A1887F]"
+                      placeholder="作者名字"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-youyou text-[#5D5D5D]">小红书 ID</label>
+                    <input
+                      type="text"
+                      value={activeDrawing.authorHandle}
+                      onChange={(event) => updateDrawingField('authorHandle', event.target.value)}
+                      className="w-full rounded-xl border border-[#E8E4DF] bg-white px-4 py-3 text-[#3A3A3A] outline-none transition-colors focus:border-[#A1887F]"
+                      placeholder="小红书账号"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-youyou text-[#5D5D5D]">简介</label>
+                  <textarea
+                    value={activeDrawing.description}
+                    onChange={(event) => updateDrawingField('description', event.target.value)}
+                    rows={4}
+                    className="w-full rounded-xl border border-[#E8E4DF] bg-white px-4 py-3 text-[#3A3A3A] outline-none transition-colors focus:border-[#A1887F]"
+                    placeholder="可选，前台标题下方会展示。"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#3A3A3A] px-5 py-3 text-sm text-white transition-colors hover:bg-[#2A2A2A] disabled:bg-[#8D8D8D]"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  <span>{saving ? '保存中...' : '保存基本信息'}</span>
+                </button>
+              </form>
+
+              <div className="space-y-5 rounded-2xl border border-[#E8E4DF] bg-[#FCFBF8] p-5">
+                <div className="space-y-1">
+                  <h3 className="font-youyou text-lg text-[#3A3A3A]">
+                    画作图片 · 作品 {activeTab + 1}
+                  </h3>
+                  <p className="text-sm text-[#8D8D8D]">
+                    图片会按上传顺序追加到前台轮播中。若是新作品，请先保存左侧基本信息，再开始上传。
+                  </p>
+                </div>
+
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-[#D7CCC8] bg-white px-4 py-6 text-sm text-[#6C665F] transition-colors hover:border-[#A1887F] hover:text-[#A1887F]">
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ImagePlus className="h-4 w-4" />
+                  )}
+                  <span>{uploading ? '上传中...' : '选择并上传图片'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={uploading}
+                    onChange={(event) => {
+                      void handleUpload(event)
+                    }}
+                    className="hidden"
+                  />
+                </label>
+
+                {activeDrawing.images.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[#E8E4DF] bg-white/70 px-4 py-10 text-center text-sm text-[#8D8D8D]">
+                    暂无已上传图片。
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {activeDrawing.images.map((image, index) => {
+                      const isDeleting = deletingImageId === image.id
+
+                      return (
+                        <div
+                          key={image.id}
+                          className="overflow-hidden rounded-2xl border border-[#E8E4DF] bg-white"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image.imageUrl}
+                            alt={image.altText || `${activeDrawing.title} ${index + 1}`}
+                            className="h-48 w-full object-cover"
+                          />
+
+                          <div className="space-y-3 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm text-[#3A3A3A]">
+                                  第 {image.sortOrder + 1} 张
+                                </p>
+                                <p className="truncate text-xs text-[#8D8D8D]">
+                                  {image.altText || '未设置替代文本'}
+                                </p>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteImage(image.id)}
+                                disabled={isDeleting}
+                                className="inline-flex items-center gap-1 rounded-full border border-red-100 px-3 py-1.5 text-xs text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                              >
+                                {isDeleting ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                                <span>{isDeleting ? '删除中...' : '删除'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-[#E8E4DF] bg-[#FAF8F4] text-sm text-[#8D8D8D]">
+              暂无作品，请点击"添加作品"开始创建。
+            </div>
+          )}
+        </>
       )}
     </section>
   )
