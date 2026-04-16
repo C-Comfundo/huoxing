@@ -379,7 +379,7 @@ export default function IssueDrawingManager({
                     基本信息 · 作品 {activeTab + 1}
                   </h3>
                   <p className="text-sm text-[#8D8D8D]">
-                    这里保存的是这一期"画里有话"作品 {activeTab + 1} 的正式内容源。
+                    这里保存的是这一期&ldquo;画里有话&rdquo;作品 {activeTab + 1} 的正式内容源。
                   </p>
                 </div>
 
@@ -525,7 +525,7 @@ export default function IssueDrawingManager({
             </div>
           ) : (
             <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-[#E8E4DF] bg-[#FAF8F4] text-sm text-[#8D8D8D]">
-              暂无作品，请点击"添加作品"开始创建。
+              暂无作品，请点击&ldquo;添加作品&rdquo;开始创建。
             </div>
           )}
         </>
