@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { getAdminAccess } from '@/lib/admin-access'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ARTICLE_CATEGORY_DEFINITIONS } from '@/lib/article-categories'
 
 interface ActionResult<T = null> {
   success: boolean
@@ -716,6 +717,227 @@ export async function reorderAdminTocItems(
     return {
       success: false,
       message: `更新条目排序失败：${getErrorMessage(err)}`,
+    }
+  }
+}
+
+function isDrawingSectionName(displayName: string) {
+  return displayName.includes('画里有话') || displayName.includes('画里话外')
+}
+
+function isDebateSectionName(displayName: string) {
+  return displayName.includes('辩题') || displayName.includes('以辩会友')
+}
+
+export async function generateAdminTocFromArticles(
+  issueId: string
+): Promise<ActionResult<AdminTocSection[]>> {
+  try {
+    const adminAccess = await requireTocAdmin<AdminTocSection[]>()
+    if (!adminAccess.ok) return adminAccess.result
+
+    if (!issueId) {
+      return { success: false, message: '缺少期刊 ID。' }
+    }
+
+    const adminClient = createAdminClient()
+    const issueSlug = await getIssueSlug(adminClient, issueId)
+
+    // 1. Load all published articles for this issue
+    const { data: articleRows, error: articleError } = await adminClient
+      .from('articles')
+      .select('title, author, category, published_at, sort_order')
+      .eq('issue_id', issueId)
+      .order('published_at', { ascending: true })
+
+    if (articleError) {
+      return {
+        success: false,
+        message: `读取文章失败：${getErrorMessage(articleError)}`,
+      }
+    }
+
+    const articles = (articleRows as RawRow[] | null) ?? []
+
+    // 2. Group articles by category
+    const articlesByCategory = new Map<string, RawRow[]>()
+    for (const a of articles) {
+      const cat = toText(a.category)
+      if (!cat) continue
+      const list = articlesByCategory.get(cat) ?? []
+      list.push(a)
+      articlesByCategory.set(cat, list)
+    }
+
+    // 3. Check existing sections to preserve custom order if any
+    const { data: existingSections } = await adminClient
+      .from('issue_toc_sections')
+      .select('id, display_name, sort_order, is_standalone')
+      .eq('issue_id', issueId)
+      .order('sort_order', { ascending: true })
+
+    const existingMap = new Map<string, RawRow>()
+    for (const sec of (existingSections as RawRow[] | null) ?? []) {
+      existingMap.set(toText(sec.display_name), sec)
+    }
+
+    // 4. Delete all existing items (will re-create)
+    const existingIds = ((existingSections as RawRow[] | null) ?? []).map((s) => String(s.id ?? ''))
+    if (existingIds.length > 0) {
+      await adminClient
+        .from('issue_toc_items')
+        .delete()
+        .in('section_id', existingIds)
+    }
+
+    // 5. Delete all existing sections
+    if (existingIds.length > 0) {
+      await adminClient
+        .from('issue_toc_sections')
+        .delete()
+        .eq('issue_id', issueId)
+    }
+
+    // 6. Build sections: article categories + special sections
+    let sortOrder = 1
+
+    // Article category sections in definition order
+    for (const catDef of ARTICLE_CATEGORY_DEFINITIONS) {
+      const catArticles = articlesByCategory.get(catDef.value)
+      if (!catArticles || catArticles.length === 0) continue
+
+      const displayName = `${catDef.label}-${catDef.subtitle}`
+
+      // Check if this section had a custom order before
+      const existing = existingMap.get(displayName)
+      const useOrder = existing ? Number(existing.sort_order ?? sortOrder) : sortOrder
+
+      const { data: newSection, error: secInsertError } = await adminClient
+        .from('issue_toc_sections')
+        .insert({
+          issue_id: issueId,
+          display_name: displayName,
+          sort_order: useOrder,
+          is_standalone: false,
+        })
+        .select('id')
+        .single()
+
+      if (secInsertError || !newSection) {
+        console.error('[generateAdminTocFromArticles] Section insert error:', secInsertError)
+        sortOrder++
+        continue
+      }
+
+      // Insert items
+      const items = catArticles.map((a, idx) => ({
+        section_id: String(newSection.id),
+        title: toText(a.title),
+        author: toText(a.author),
+        sort_order: idx + 1,
+      }))
+
+      const { error: itemInsertError } = await adminClient
+        .from('issue_toc_items')
+        .insert(items)
+
+      if (itemInsertError) {
+        console.error('[generateAdminTocFromArticles] Item insert error:', itemInsertError)
+      }
+
+      sortOrder++
+    }
+
+    // 画里有话 section
+    const { data: drawingRows } = await adminClient
+      .from('issue_drawings')
+      .select('title, author_name, author_handle, sort_order')
+      .eq('issue_id', issueId)
+      .order('sort_order', { ascending: true })
+
+    const drawings = (drawingRows as RawRow[] | null) ?? []
+    if (drawings.length > 0) {
+      const drawingDisplayName = '画里有话-漫画'
+      const existingDrawing = existingMap.get(drawingDisplayName)
+      const drawingOrder = existingDrawing ? Number(existingDrawing.sort_order ?? sortOrder) : sortOrder
+
+      const { data: drawingSec } = await adminClient
+        .from('issue_toc_sections')
+        .insert({
+          issue_id: issueId,
+          display_name: drawingDisplayName,
+          sort_order: drawingOrder,
+          is_standalone: false,
+        })
+        .select('id')
+        .single()
+
+      if (drawingSec) {
+        const drawingItems = drawings.map((d, idx) => ({
+          section_id: String(drawingSec.id),
+          title: toText(d.title) || '画里有话',
+          author: toText(d.author_name) || toText(d.author_handle) || '匿名',
+          sort_order: idx + 1,
+        }))
+
+        await adminClient.from('issue_toc_items').insert(drawingItems)
+      }
+
+      sortOrder++
+    }
+
+    // 以辩会友 section (standalone)
+    const { data: debateRows } = await adminClient
+      .from('debate_topic_issue_links')
+      .select('debate_topic_id')
+      .eq('issue_id', issueId)
+
+    if ((debateRows ?? []).length > 0) {
+      const debateDisplayName = '以辩会友：辩题'
+      const existingDebate = existingMap.get(debateDisplayName)
+      const debateOrder = existingDebate ? Number(existingDebate.sort_order ?? sortOrder) : sortOrder
+
+      await adminClient
+        .from('issue_toc_sections')
+        .insert({
+          issue_id: issueId,
+          display_name: debateDisplayName,
+          sort_order: debateOrder,
+          is_standalone: true,
+        })
+    }
+
+    // 7. Re-normalize sort_order to be sequential
+    const { data: finalSections } = await adminClient
+      .from('issue_toc_sections')
+      .select('id')
+      .eq('issue_id', issueId)
+      .order('sort_order', { ascending: true })
+
+    if (finalSections) {
+      for (let i = 0; i < finalSections.length; i++) {
+        await adminClient
+          .from('issue_toc_sections')
+          .update({ sort_order: i + 1 })
+          .eq('id', String(finalSections[i].id))
+      }
+    }
+
+    revalidateIssuePaths(issueSlug)
+
+    const refreshed = await getAdminTocSections(issueId)
+    const articleCount = articles.length
+    const sectionCount = (refreshed.data ?? []).length
+
+    return {
+      success: true,
+      message: `已从 ${articleCount} 篇文章生成 ${sectionCount} 个栏目的目录。可自由调整排序。`,
+      data: refreshed.data ?? [],
+    }
+  } catch (err) {
+    return {
+      success: false,
+      message: `生成目录失败：${getErrorMessage(err)}`,
     }
   }
 }

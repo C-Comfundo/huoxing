@@ -17,6 +17,7 @@ import {
   createAdminTocSection,
   deleteAdminTocItem,
   deleteAdminTocSection,
+  generateAdminTocFromArticles,
   getAdminTocSections,
   reorderAdminTocItems,
   reorderAdminTocSections,
@@ -77,6 +78,8 @@ export default function IssueTocManager({ issues, loginPath }: IssueTocManagerPr
   // New section form
   const [newSectionName, setNewSectionName] = useState('')
   const [newSectionStandalone, setNewSectionStandalone] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [confirmGenerate, setConfirmGenerate] = useState(false)
 
   // New item form per section
   const [addingItemSectionId, setAddingItemSectionId] = useState('')
@@ -164,6 +167,22 @@ export default function IssueTocManager({ issues, loginPath }: IssueTocManagerPr
       else next.add(sectionId)
       return next
     })
+  }
+
+  // ── Generate from articles ─────────────────────────────
+
+  const handleGenerate = async () => {
+    if (!selectedIssueId) return
+    setGenerating(true)
+    setConfirmGenerate(false)
+    setMessage('')
+    setIsError(false)
+    const result = await generateAdminTocFromArticles(selectedIssueId)
+    applySections(result)
+    if (result.data) {
+      setExpandedSections(new Set(result.data.map((s) => s.id)))
+    }
+    setGenerating(false)
   }
 
   // ── Section CRUD ─────────────────────────────────────────
@@ -314,7 +333,7 @@ export default function IssueTocManager({ issues, loginPath }: IssueTocManagerPr
         <div>
           <h2 className="font-youyou text-2xl text-[#3A3A3A]">目录管理</h2>
           <p className="mt-1 text-sm text-[#8D8D8D]">
-            管理每期期刊的目录栏目和条目。画里有话、辩题栏目的条目会自动同步。
+            一键从文章数据生成目录，可自定义栏目排列顺序。
           </p>
         </div>
       </div>
@@ -362,6 +381,51 @@ export default function IssueTocManager({ issues, loginPath }: IssueTocManagerPr
         </div>
       ) : (
         <>
+          {/* Generate button */}
+          <div className="mb-4 flex items-center gap-3">
+            {confirmGenerate ? (
+              <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5">
+                <span className="text-sm text-amber-700">
+                  {sections.length > 0
+                    ? '将清除当前目录并从文章重新生成，确认？'
+                    : '确认从文章生成目录？'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleGenerate()}
+                  disabled={generating}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#3A3A3A] px-3 py-1.5 text-xs text-white hover:bg-[#2A2A2A] disabled:bg-[#8D8D8D]"
+                >
+                  {generating && <Loader2 className="h-3 w-3 animate-spin" />}
+                  确认生成
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmGenerate(false)}
+                  className="rounded-lg border border-[#D7CCC8] px-3 py-1.5 text-xs text-[#7C746D] hover:border-[#A1887F]"
+                >
+                  取消
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmGenerate(true)}
+                disabled={generating || busy || !selectedIssueId}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#3A3A3A] px-5 py-2.5 text-sm text-white transition-colors hover:bg-[#2A2A2A] disabled:bg-[#8D8D8D]"
+              >
+                {generating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <List className="h-4 w-4" />
+                )}
+                <span className="font-youyou">
+                  {sections.length > 0 ? '重新生成目录' : '一键生成目录'}
+                </span>
+              </button>
+            )}
+          </div>
+
           {/* Section list */}
           <div className="space-y-3">
             {sections.map((section, sectionIndex) => {
@@ -750,7 +814,7 @@ export default function IssueTocManager({ issues, loginPath }: IssueTocManagerPr
 
           {sections.length === 0 && !loading && (
             <div className="mt-4 text-center text-sm text-[#B0B0B0]">
-              这一期还没有目录栏目，使用上方表单创建第一个栏目。
+              这一期还没有目录，点击上方「一键生成目录」按钮从文章数据自动生成。
             </div>
           )}
         </>
