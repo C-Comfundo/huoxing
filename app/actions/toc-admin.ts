@@ -623,9 +623,9 @@ export async function deleteAdminTocItem(
 export async function reorderAdminTocSections(
   issueId: string,
   orderedIds: string[]
-): Promise<ActionResult<AdminTocSection[]>> {
+): Promise<ActionResult> {
   try {
-    const adminAccess = await requireTocAdmin<AdminTocSection[]>()
+    const adminAccess = await requireTocAdmin()
     if (!adminAccess.ok) return adminAccess.result
 
     if (!issueId || orderedIds.length === 0) {
@@ -634,29 +634,26 @@ export async function reorderAdminTocSections(
 
     const adminClient = createAdminClient()
 
-    for (let i = 0; i < orderedIds.length; i++) {
-      const { error } = await adminClient
+    // Batch update: build all promises and run in parallel
+    const updates = orderedIds.map((id, i) =>
+      adminClient
         .from('issue_toc_sections')
         .update({ sort_order: i + 1 })
-        .eq('id', orderedIds[i])
-
-      if (error) {
-        return {
-          success: false,
-          message: `更新栏目排序失败：${getErrorMessage(error)}`,
-        }
+        .eq('id', id)
+    )
+    const results = await Promise.all(updates)
+    const firstError = results.find((r) => r.error)
+    if (firstError?.error) {
+      return {
+        success: false,
+        message: `更新栏目排序失败：${getErrorMessage(firstError.error)}`,
       }
     }
 
-    const issueSlug = await getIssueSlug(adminClient, issueId)
-    revalidateIssuePaths(issueSlug)
+    // Revalidate in background – don't block the response
+    getIssueSlug(adminClient, issueId).then((slug) => revalidateIssuePaths(slug))
 
-    const refreshed = await getAdminTocSections(issueId)
-    return {
-      success: true,
-      message: '栏目排序已更新。',
-      data: refreshed.data ?? [],
-    }
+    return { success: true, message: '栏目排序已更新。' }
   } catch (err) {
     return {
       success: false,
@@ -668,9 +665,9 @@ export async function reorderAdminTocSections(
 export async function reorderAdminTocItems(
   sectionId: string,
   orderedIds: string[]
-): Promise<ActionResult<AdminTocSection[]>> {
+): Promise<ActionResult> {
   try {
-    const adminAccess = await requireTocAdmin<AdminTocSection[]>()
+    const adminAccess = await requireTocAdmin()
     if (!adminAccess.ok) return adminAccess.result
 
     if (!sectionId || orderedIds.length === 0) {
@@ -679,40 +676,36 @@ export async function reorderAdminTocItems(
 
     const adminClient = createAdminClient()
 
-    for (let i = 0; i < orderedIds.length; i++) {
-      const { error } = await adminClient
+    // Batch update: build all promises and run in parallel
+    const updates = orderedIds.map((id, i) =>
+      adminClient
         .from('issue_toc_items')
         .update({ sort_order: i + 1 })
-        .eq('id', orderedIds[i])
-
-      if (error) {
-        return {
-          success: false,
-          message: `更新条目排序失败：${getErrorMessage(error)}`,
-        }
+        .eq('id', id)
+    )
+    const results = await Promise.all(updates)
+    const firstError = results.find((r) => r.error)
+    if (firstError?.error) {
+      return {
+        success: false,
+        message: `更新条目排序失败：${getErrorMessage(firstError.error)}`,
       }
     }
 
-    // Look up issue_id from section
-    const { data: sectionRow } = await adminClient
+    // Revalidate in background – don't block the response
+    adminClient
       .from('issue_toc_sections')
       .select('issue_id')
       .eq('id', sectionId)
       .maybeSingle()
+      .then(({ data: row }) => {
+        const issueId = row ? String(row.issue_id ?? '') : ''
+        if (issueId) {
+          getIssueSlug(adminClient, issueId).then((slug) => revalidateIssuePaths(slug))
+        }
+      })
 
-    const issueId = sectionRow ? String(sectionRow.issue_id ?? '') : ''
-
-    if (issueId) {
-      const issueSlug = await getIssueSlug(adminClient, issueId)
-      revalidateIssuePaths(issueSlug)
-    }
-
-    const refreshed = issueId ? await getAdminTocSections(issueId) : { data: [] }
-    return {
-      success: true,
-      message: '条目排序已更新。',
-      data: refreshed.data ?? [],
-    }
+    return { success: true, message: '条目排序已更新。' }
   } catch (err) {
     return {
       success: false,

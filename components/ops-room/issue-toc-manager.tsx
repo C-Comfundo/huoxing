@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ChevronDown,
@@ -96,6 +96,10 @@ export default function IssueTocManager({ issues, loginPath }: IssueTocManagerPr
   // Delete confirmation
   const [confirmDeleteSectionId, setConfirmDeleteSectionId] = useState('')
   const [confirmDeleteItemId, setConfirmDeleteItemId] = useState('')
+
+  // Debounced reorder refs
+  const sectionReorderTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const itemReorderTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const selectedIssue = issues.find((i) => i.id === selectedIssueId) ?? null
 
@@ -239,7 +243,7 @@ export default function IssueTocManager({ issues, loginPath }: IssueTocManagerPr
     setBusy(false)
   }
 
-  const handleMoveSection = async (index: number, direction: -1 | 1) => {
+  const handleMoveSection = (index: number, direction: -1 | 1) => {
     const newIndex = index + direction
     if (newIndex < 0 || newIndex >= sections.length) return
 
@@ -247,17 +251,22 @@ export default function IssueTocManager({ issues, loginPath }: IssueTocManagerPr
     const [moved] = reordered.splice(index, 1)
     reordered.splice(newIndex, 0, moved)
 
-    // Optimistic update
+    // Optimistic update – instant
     setSections(reordered)
-
-    setBusy(true)
     setMessage('')
-    const result = await reorderAdminTocSections(
-      selectedIssueId,
-      reordered.map((s) => s.id)
-    )
-    applySections(result)
-    setBusy(false)
+
+    // Debounce: only send the final order to server after 400ms of inactivity
+    if (sectionReorderTimer.current) clearTimeout(sectionReorderTimer.current)
+    const issueId = selectedIssueId
+    const orderedIds = reordered.map((s) => s.id)
+    sectionReorderTimer.current = setTimeout(async () => {
+      const result = await reorderAdminTocSections(issueId, orderedIds)
+      if (!result.success) {
+        handleGuardFailure(result.error, result.message)
+        // Reload to get the true server state
+        loadSections(issueId)
+      }
+    }, 400)
   }
 
   // ── Item CRUD ────────────────────────────────────────────
@@ -301,7 +310,7 @@ export default function IssueTocManager({ issues, loginPath }: IssueTocManagerPr
     setBusy(false)
   }
 
-  const handleMoveItem = async (section: AdminTocSection, itemIndex: number, direction: -1 | 1) => {
+  const handleMoveItem = (section: AdminTocSection, itemIndex: number, direction: -1 | 1) => {
     const newIndex = itemIndex + direction
     if (newIndex < 0 || newIndex >= section.items.length) return
 
@@ -309,19 +318,30 @@ export default function IssueTocManager({ issues, loginPath }: IssueTocManagerPr
     const [moved] = reorderedItems.splice(itemIndex, 1)
     reorderedItems.splice(newIndex, 0, moved)
 
-    // Optimistic update
+    // Optimistic update – instant
     setSections((prev) =>
       prev.map((s) => (s.id === section.id ? { ...s, items: reorderedItems } : s))
     )
-
-    setBusy(true)
     setMessage('')
-    const result = await reorderAdminTocItems(
-      section.id,
-      reorderedItems.map((i) => i.id)
+
+    // Debounce: only send the final order to server after 400ms of inactivity
+    const timers = itemReorderTimers.current
+    const existing = timers.get(section.id)
+    if (existing) clearTimeout(existing)
+    const sectionId = section.id
+    const orderedIds = reorderedItems.map((i) => i.id)
+    const issueId = selectedIssueId
+    timers.set(
+      sectionId,
+      setTimeout(async () => {
+        timers.delete(sectionId)
+        const result = await reorderAdminTocItems(sectionId, orderedIds)
+        if (!result.success) {
+          handleGuardFailure(result.error, result.message)
+          loadSections(issueId)
+        }
+      }, 400)
     )
-    applySections(result)
-    setBusy(false)
   }
 
   return (
