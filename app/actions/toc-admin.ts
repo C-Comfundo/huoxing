@@ -746,7 +746,7 @@ export async function generateAdminTocFromArticles(
     // 1. Load all published articles for this issue
     const { data: articleRows, error: articleError } = await adminClient
       .from('articles')
-      .select('title, author_name, category, published_at, sort_order')
+      .select('title, author_name, category, published_at')
       .eq('issue_id', issueId)
       .order('published_at', { ascending: true })
 
