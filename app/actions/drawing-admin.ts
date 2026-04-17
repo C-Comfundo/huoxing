@@ -318,52 +318,34 @@ async function syncIssueDrawingTocItems(
 
   const drawings = (drawingRows as RawRow[] | null) ?? []
 
-  // Build a combined title/author from all drawings
-  const titles = drawings.map((d) => toText(d.title)).filter(Boolean)
-  const authors = drawings.map((d) => toText(d.author_name) || toText(d.author_handle) || '匿名')
-  const combinedTitle = titles.join(' / ') || '画里有话'
-  const combinedAuthor = authors.join(' / ') || '匿名'
-
-  const { data: itemRow, error: itemError } = await adminClient
+  // Delete existing TOC items for this drawing section, then recreate one per drawing
+  const { error: deleteError } = await adminClient
     .from('issue_toc_items')
-    .select('id')
+    .delete()
     .eq('section_id', sectionId)
-    .order('sort_order', { ascending: true })
-    .limit(1)
-    .maybeSingle()
 
-  if (itemError) {
-    console.error('[syncIssueDrawingTocItems] Failed to load TOC item:', itemError)
+  if (deleteError) {
+    console.error('[syncIssueDrawingTocItems] Failed to delete old TOC items:', deleteError)
     return
   }
 
-  const payload = {
-    title: combinedTitle,
-    author: combinedAuthor,
-  }
-
-  if (itemRow?.id) {
-    const { error: updateError } = await adminClient
-      .from('issue_toc_items')
-      .update(payload)
-      .eq('id', itemRow.id)
-
-    if (updateError) {
-      console.error('[syncIssueDrawingTocItems] Failed to update TOC item:', updateError)
-    }
-
+  if (drawings.length === 0) {
     return
   }
 
-  const { error: insertError } = await adminClient.from('issue_toc_items').insert({
+  const newItems = drawings.map((d, index) => ({
     section_id: sectionId,
-    title: payload.title,
-    author: payload.author,
-    sort_order: 1,
-  })
+    title: toText(d.title) || '画里有话',
+    author: toText(d.author_name) || toText(d.author_handle) || '匿名',
+    sort_order: index,
+  }))
+
+  const { error: insertError } = await adminClient
+    .from('issue_toc_items')
+    .insert(newItems)
 
   if (insertError) {
-    console.error('[syncIssueDrawingTocItems] Failed to insert TOC item:', insertError)
+    console.error('[syncIssueDrawingTocItems] Failed to insert TOC items:', insertError)
   }
 }
 
