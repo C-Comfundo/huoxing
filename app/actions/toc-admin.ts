@@ -746,7 +746,7 @@ export async function generateAdminTocFromArticles(
     // 1. Load all published articles for this issue
     const { data: articleRows, error: articleError } = await adminClient
       .from('articles')
-      .select('title, author, category, published_at, sort_order')
+      .select('title, author_name, category, published_at, sort_order')
       .eq('issue_id', issueId)
       .order('published_at', { ascending: true })
 
@@ -833,7 +833,7 @@ export async function generateAdminTocFromArticles(
       const items = catArticles.map((a, idx) => ({
         section_id: String(newSection.id),
         title: toText(a.title),
-        author: toText(a.author),
+        author: toText(a.author_name),
         sort_order: idx + 1,
       }))
 

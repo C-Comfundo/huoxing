@@ -227,7 +227,6 @@ export async function getIssueDrawingsByIssueId(issueId: string): Promise<IssueD
 
     if (imageError) {
       console.error("[getIssueDrawingsByIssueId] Failed to load drawing images:", imageError);
-      continue;
     }
 
     if (commentError) {
@@ -237,7 +236,7 @@ export async function getIssueDrawingsByIssueId(issueId: string): Promise<IssueD
     drawings.push(
       mapIssueDrawing(
         drawingRow,
-        (imageRows ?? []).map(mapIssueDrawingImage),
+        imageError ? [] : (imageRows ?? []).map(mapIssueDrawingImage),
         Number(commentCount ?? 0)
       )
     );
