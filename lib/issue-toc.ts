@@ -42,17 +42,6 @@ function isDrawingSection(displayName: string) {
   return displayName.includes("画里有话") || displayName.includes("画里话外");
 }
 
-function getDrawingTocOverrides(rows: RawItemRow[]): Array<{ title: string; author: string }> {
-  if (rows.length === 0) {
-    return [];
-  }
-
-  return rows.map((r) => ({
-    title: toText(r.title).trim() || "画里有话",
-    author: toText(r.author_name).trim() || toText(r.author_handle).trim() || "匿名",
-  }));
-}
-
 /**
  * Fetch the full table of contents for an issue.
  * RLS ensures only published-issue data is returned.
@@ -83,28 +72,6 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
       console.error("[getIssueTOC] 获取目录栏目失败:", secError);
     }
     return [];
-  }
-
-  const hasDrawingSection = (sectionRows as RawSectionRow[]).some((row) =>
-    isDrawingSection(toText(row.display_name))
-  );
-
-  let drawingOverrides: Array<{ title: string; author: string }> = [];
-
-  if (hasDrawingSection) {
-    const { data: drawingRows, error: drawingError } = await supabase
-      .from("issue_drawings")
-      .select("title, author_name, author_handle, sort_order")
-      .eq("issue_id", issueId)
-      .order("sort_order", { ascending: true });
-
-    if (drawingError) {
-      console.error("[getIssueTOC] 获取画里有话内容失败:", drawingError);
-    } else {
-      drawingOverrides = getDrawingTocOverrides(
-        (drawingRows as RawItemRow[] | null) ?? []
-      );
-    }
   }
 
   const sectionIds = (sectionRows as RawSectionRow[]).map((row) =>
@@ -148,18 +115,14 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
     let customHref: string | undefined;
     const sectionRow = (sectionRows as RawSectionRow[]).find(s => s.id === sectionId);
     const displayName = sectionRow ? toText(sectionRow.display_name) : "";
-    const isDrawingItem = isDrawingSection(displayName);
-    
     if (isDrawingSection(displayName)) {
       customHref = issueSlug ? `/issues/${issueSlug}/drawing` : "/drawing";
     } else if (displayName.includes("辩题") || displayName.includes("以辩会友")) {
       customHref = issueSlug ? `/issues/${issueSlug}/debate` : "/debate";
     }
 
-    const itemSortOrder = Number(row.sort_order ?? 0);
-    const drawingMatch = isDrawingItem ? drawingOverrides[itemSortOrder] : undefined;
-    const title = drawingMatch ? drawingMatch.title : toText(row.title);
-    const author = drawingMatch ? (drawingMatch.author || "匿名") : toText(row.author);
+    const title = toText(row.title);
+    const author = toText(row.author);
 
     const item: TOCItem = {
       id: String(row.id ?? ""),
@@ -189,15 +152,7 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
 
     let items = itemsBySectionId.get(id) ?? [];
 
-    if (isDrawingSection(displayName) && items.length === 0 && drawingOverrides.length > 0) {
-      items = drawingOverrides.map((d, index) => ({
-        id: `drawing-${issueId}-${index}`,
-        title: d.title,
-        author: d.author || "匿名",
-        sortOrder: index,
-        customHref,
-      }));
-    }
+
 
     return {
       id,
