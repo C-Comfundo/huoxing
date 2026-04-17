@@ -156,7 +156,6 @@ function SectionCard({
                 </div>
               </>
             );
-            console.log("item.id", item.id); // Log the item to the consol
 
             return (
               <li

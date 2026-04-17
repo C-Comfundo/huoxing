@@ -50,7 +50,7 @@ export default async function IssueDrawingPage({ params }: PageProps) {
 
       <div className="mx-auto max-w-6xl px-4 pb-24 pt-24 md:px-8 md:pt-32">
         <Link
-          href={`/issues/${issue.slug}`}
+          href={`/issues/${issue.slug}#article-drawing-${drawing.id}`}
           className="group mb-10 inline-flex items-center text-[#9E9E9E] transition-colors hover:text-[#A1887F]"
         >
           <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />

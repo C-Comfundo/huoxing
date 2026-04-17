@@ -30,6 +30,7 @@ type PrimaryNavItem = NavLinkItem | NavGroupItem;
 
 interface NavbarProps {
   articleId?: string; // 添加 articleId 参数
+  debateId?: string;
 }
 
 const primaryNavItems: PrimaryNavItem[] = [

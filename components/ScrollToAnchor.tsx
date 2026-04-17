@@ -2,53 +2,24 @@
 
 import { useEffect } from 'react';
 
+// 确保 ScrollToAnchor 组件能够处理 URL 中的锚点
 export default function ScrollToAnchor() {
   useEffect(() => {
-    const handleScrollToAnchor = () => {
-      let elementId = '';
-      
-      // 首先检查 hash
-      const hash = window.location.hash;
-      if (hash) {
-        elementId = hash.substring(1);
-      } 
-      // 如果没有 hash，检查 articleId 查询参数
-      else {
-        const urlParams = new URLSearchParams(window.location.search);
-        const articleId = urlParams.get('articleId');
-        if (articleId) {
-          elementId = articleId;
-        }
+    // 检查 URL 是否包含锚点
+    const hash = window.location.hash;
+    if (hash) {
+      // 移除 # 符号
+      const id = hash.substring(1);
+      // 查找对应的元素
+      const element = document.getElementById(id);
+      if (element) {
+        // 滚动到元素位置
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
       }
-      
-      if (elementId) {
-        // 延迟执行以确保页面完全加载
-        setTimeout(() => {
-          const element = document.getElementById(elementId);
-          if (element) {
-            element.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start',
-              inline: 'nearest'
-            });
-          }
-        }, 300);
-      }
-    };
-
-    // 初始加载时执行
-    handleScrollToAnchor();
-
-    // 监听 hash 变化
-    window.addEventListener('hashchange', handleScrollToAnchor);
-    
-    // 监听 popstate 变化（处理浏览器前进/后退）
-    window.addEventListener('popstate', handleScrollToAnchor);
-
-    return () => {
-      window.removeEventListener('hashchange', handleScrollToAnchor);
-      window.removeEventListener('popstate', handleScrollToAnchor);
-    };
+    }
   }, []);
 
   return null;
