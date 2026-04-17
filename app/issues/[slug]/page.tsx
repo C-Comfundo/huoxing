@@ -12,6 +12,7 @@ import {
 } from "@/lib/articles";
 import { getIssueDrawingsByIssueId } from "@/lib/issue-drawings";
 import { getIssueDisplayTitle } from "@/lib/issue-display";
+import IssueCredits from "@/components/IssueCredits";
 
 export const revalidate = 60;
 
@@ -239,6 +240,9 @@ export default async function IssueDetailPage({ params }: PageProps) {
             ))}
           </div>
         )}
+
+        {/* 制作团队 */}
+        <IssueCredits issueSlug={issue.slug} />
       </div>
     </main>
   );
