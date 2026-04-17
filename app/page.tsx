@@ -5,6 +5,7 @@ import { getCurrentIssue } from "@/lib/articles";
 import { getDebateTopicTiming, type DebateTopicStatus } from "@/lib/debate-schedule";
 import { getDebateTopicSummariesByIssueId } from "@/lib/debates";
 import { getIssueTOC } from "@/lib/issue-toc";
+import { getIssueCredits } from "@/lib/issue-credits";
 import { getPreferredPublicImagePath } from "@/lib/public-assets";
 import ScrollToAnchor from '@/components/ScrollToAnchor';
 
@@ -43,6 +44,9 @@ export default async function Home() {
   const tocSections = currentIssue
     ? await getIssueTOC(currentIssue.id)
     : [];
+  const credits = currentIssue
+    ? await getIssueCredits(currentIssue.id)
+    : null;
   const heroCoverImage = getPreferredPublicImagePath(currentIssue?.coverImage) ?? "/poster.webp";
 
   return (
@@ -56,7 +60,7 @@ export default async function Home() {
         </div>
 
         <div className="relative z-10 flex min-h-screen flex-col rounded-t-[2.5rem] bg-white pb-0 pt-4 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.15)] md:rounded-t-[3rem] md:pt-8">
-          <Feed issue={currentIssue} debateEntries={debateEntries} tocSections={tocSections} />
+          <Feed issue={currentIssue} debateEntries={debateEntries} tocSections={tocSections} credits={credits} />
 
           <footer className="mt-2 border-t border-[#EFEBE9] bg-transparent py-6 text-center text-sm font-light tracking-widest text-[#9E9E9E] md:py-7">
             <p>

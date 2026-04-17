@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Issue } from "@/lib/articles";
 import type { DebateTopicStatus } from "@/lib/debate-schedule";
 import type { TOCSection } from "@/lib/issue-toc";
+import type { IssueCredit } from "@/lib/issue-credits";
 import HomeDebateEntryRail from "@/components/debate/HomeDebateEntryRail";
 import IssueBadge from "@/components/IssueBadge";
 import IssueTOC from "@/components/IssueTOC";
@@ -20,10 +21,11 @@ interface FeedProps {
     status: DebateTopicStatus;
   }>;
   tocSections?: TOCSection[];
+  credits?: IssueCredit | null;
 }
 
 
-export default function Feed({ issue = null, debateEntries = [], tocSections = [] }: FeedProps) {
+export default function Feed({ issue = null, debateEntries = [], tocSections = [], credits = null }: FeedProps) {
   return (
     <section className="bg-white/0 px-6 pb-4 pt-6 md:px-12 md:pb-8 md:pt-10 lg:px-24 lg:pb-10 lg:pt-12">
       <div className="mx-auto max-w-7xl">
@@ -82,7 +84,7 @@ export default function Feed({ issue = null, debateEntries = [], tocSections = [
         {tocSections.length > 0 ? (
           <div className="border-t border-[#EEE4D8] pt-10 opacity-0 animate-[fadeInUp_0.8s_ease-out_0.7s_forwards] md:pt-12 pb-8">
             <IssueTOC sections={tocSections} issueLabel={issue?.label} />
-            {issue?.slug && <IssueCredits issueSlug={issue.slug} />}
+            {issue?.slug && <IssueCredits data={credits} />}
           </div>
         ) : null}
       </div>

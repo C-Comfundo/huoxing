@@ -8,6 +8,7 @@ import { ArrowLeft, FilePlus2, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-r
 import IssueDebateTopicsManager from '@/components/ops-room/issue-debate-topics-manager'
 import IssueDrawingManager from '@/components/ops-room/issue-drawing-manager'
 import IssueTocManager from '@/components/ops-room/issue-toc-manager'
+import IssueCreditsManager from '@/components/ops-room/issue-credits-manager'
 import {
   createAdminArticle,
   createAdminIssue,
@@ -1277,6 +1278,11 @@ export default function ArticlePublisherPanel() {
         />
 
         <IssueDrawingManager
+          issues={issues}
+          loginPath={OPS_ROOM_ARTICLE_LOGIN_PATH}
+        />
+
+        <IssueCreditsManager
           issues={issues}
           loginPath={OPS_ROOM_ARTICLE_LOGIN_PATH}
         />

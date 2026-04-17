@@ -12,6 +12,7 @@ import {
 } from "@/lib/articles";
 import { getIssueDrawingsByIssueId } from "@/lib/issue-drawings";
 import { getIssueDisplayTitle } from "@/lib/issue-display";
+import { getIssueCredits } from "@/lib/issue-credits";
 import IssueCredits from "@/components/IssueCredits";
 
 export const revalidate = 60;
@@ -137,9 +138,10 @@ export default async function IssueDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [articles, drawings] = await Promise.all([
+  const [articles, drawings, credits] = await Promise.all([
     getArticlesByIssue(issue.id),
     getIssueDrawingsByIssueId(issue.id),
+    getIssueCredits(issue.id),
   ]);
 
   // Inject drawings as pseudo-article cards at the end of the list.
@@ -242,7 +244,7 @@ export default async function IssueDetailPage({ params }: PageProps) {
         )}
 
         {/* 制作团队 */}
-        <IssueCredits issueSlug={issue.slug} />
+        <IssueCredits data={credits} />
       </div>
     </main>
   );
