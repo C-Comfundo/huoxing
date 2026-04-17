@@ -106,7 +106,7 @@ function IssueCategorySection({
             </span>
           ) : null}
         </h2>
-        <span className="text-sm text-[#8D8D8D]">{categoryArticles.length} \u7bc7</span>
+        <span className="text-sm text-[#8D8D8D]">{categoryArticles.length} 篇</span>
       </div>
 
       <div className={cardGridClassName}>
