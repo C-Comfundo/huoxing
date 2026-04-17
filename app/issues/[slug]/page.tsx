@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ArticleCard from "@/components/ArticleCard";
 import IssueBadge from "@/components/IssueBadge";
 import Navbar from "@/components/Navbar";
 import IssueArchiveTOC from "@/components/IssueArchiveTOC";
@@ -41,6 +42,85 @@ interface PageProps {
     slug: string;
   };
 }
+
+/* ── Current-issue: expanded card layout ── */
+
+type ArticleCategoryGroup = [string, Article[]];
+
+interface IssueCategoryRow {
+  groups: ArticleCategoryGroup[];
+}
+
+function buildIssueCategoryRows(groups: ArticleCategoryGroup[]): IssueCategoryRow[] {
+  const rows: IssueCategoryRow[] = [];
+  let pendingSingleCardGroups: ArticleCategoryGroup[] = [];
+
+  const flushSingleCardGroups = () => {
+    if (pendingSingleCardGroups.length === 0) return;
+    rows.push({ groups: pendingSingleCardGroups });
+    pendingSingleCardGroups = [];
+  };
+
+  for (const group of groups) {
+    const [, categoryArticles] = group;
+    if (categoryArticles.length === 1) {
+      pendingSingleCardGroups.push(group);
+      if (pendingSingleCardGroups.length === 2) flushSingleCardGroups();
+      continue;
+    }
+    flushSingleCardGroups();
+    rows.push({ groups: [group] });
+  }
+
+  flushSingleCardGroups();
+  return rows;
+}
+
+function IssueCategorySection({
+  category,
+  categoryArticles,
+}: {
+  category: string;
+  categoryArticles: Article[];
+}) {
+  const categoryHeading = getIssuePageCategoryHeadingParts(category);
+  const cardGridClassName =
+    categoryArticles.length > 1
+      ? "grid grid-cols-1 gap-x-12 gap-y-20 md:grid-cols-2"
+      : "grid grid-cols-1 gap-x-12 gap-y-20";
+
+  return (
+    <section id={category} className="scroll-mt-28 space-y-8">
+      <div className="flex items-center gap-3 border-b border-[#DDD6CE] pb-4">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#A1887F] opacity-60" />
+        <h2 className="flex flex-wrap items-end gap-x-2 gap-y-1 text-[#2C2C2C]">
+          <span className="font-youyou text-3xl">{categoryHeading.title}</span>
+          {categoryHeading.subtitle ? (
+            <span className="inline-flex items-end gap-2 pb-0.5 text-[#8A7A73]">
+              <span aria-hidden="true" className="text-sm font-serif text-[#B8AAA0]">
+                -
+              </span>
+              <span className="font-note text-base tracking-[0.12em] md:text-lg">
+                {categoryHeading.subtitle}
+              </span>
+            </span>
+          ) : null}
+        </h2>
+        <span className="text-sm text-[#8D8D8D]">{categoryArticles.length} \u7bc7</span>
+      </div>
+
+      <div className={cardGridClassName}>
+        {categoryArticles.map((article) => (
+          <div key={article.id} id={`article-${article.slug}`} className="scroll-mt-32">
+            <ArticleCard article={article} showReadMore extendedCategoryLabel />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ── Archived-issue: collapsible TOC ── */
 
 function buildArchiveSections(
   groups: [string, Article[]][],
@@ -111,14 +191,16 @@ export default async function IssueDetailPage({ params }: PageProps) {
   }
 
   const groups = groupArticlesByCategory(allArticles);
-  const archiveSections = buildArchiveSections(groups, issue.slug);
+  const isCurrentIssue = Boolean(issue.isCurrent);
+  const categoryRows = isCurrentIssue ? buildIssueCategoryRows(groups) : [];
+  const archiveSections = isCurrentIssue ? [] : buildArchiveSections(groups, issue.slug);
 
   return (
     <main className="min-h-screen bg-[#F7F5F0]">
       <Navbar />
 
-      <div className="mx-auto max-w-3xl px-4 pb-24 pt-32 md:px-8">
-        <header className="mb-12 border-b border-[#DDD6CE] pb-10">
+      <div className={`mx-auto px-4 pb-24 pt-32 md:px-8 ${isCurrentIssue ? 'max-w-6xl' : 'max-w-3xl'}`}>
+        <header className={`border-b border-[#DDD6CE] pb-10 ${isCurrentIssue ? 'mb-16' : 'mb-12'}`}>
           <div className="flex flex-wrap items-center gap-3">
             <span className="h-1.5 w-1.5 rounded-full bg-[#A1887F] opacity-60" />
             <p className="text-xs uppercase tracking-[0.35em] text-[#9E9E9E]">Issue</p>
@@ -157,9 +239,30 @@ export default async function IssueDetailPage({ params }: PageProps) {
           </div>
         </header>
 
-        {archiveSections.length === 0 ? (
+        {groups.length === 0 ? (
           <div className="rounded-[2rem] border border-[#E8E4DF] bg-white/70 px-8 py-14 text-center text-[#8D8D8D]">
             这一期还没有已发布文章。
+          </div>
+        ) : isCurrentIssue ? (
+          <div className="space-y-16">
+            {categoryRows.map((row) => (
+              <div
+                key={row.groups.map(([c]) => c).join("-")}
+                className={
+                  row.groups.length === 2
+                    ? "grid grid-cols-1 gap-16 md:grid-cols-2 md:gap-12"
+                    : undefined
+                }
+              >
+                {row.groups.map(([category, categoryArticles]) => (
+                  <IssueCategorySection
+                    key={category}
+                    category={category}
+                    categoryArticles={categoryArticles}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
         ) : (
           <IssueArchiveTOC sections={archiveSections} />
