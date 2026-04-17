@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 
-import { Heart, MessageSquare } from "lucide-react";
+import { Heart, MessageSquare, Send } from "lucide-react";
 
 import { submitEcho, type Echo } from "@/app/actions/echoes";
 
@@ -94,109 +94,105 @@ export default function EchoSection({
         </h2>
       </div>
 
+      <div className="space-y-0 divide-y divide-[#E8E4DF]/60">
+        {echoes.length === 0 ? (
+          <p className="py-6 text-center text-sm text-[#9E9E9E]">
+            旷野安静，等待第一声回响。
+          </p>
+        ) : (
+          echoes.map((echo) => (
+            <div
+              id={`echo-${echo.id}`}
+              key={echo.id}
+              className="group py-4 first:pt-0"
+            >
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="text-[13px] font-medium text-[#5D5D5D]">
+                  {echo.authorLabel}
+                </span>
+                <span className="shrink-0 text-[11px] text-[#B0B0B0]">
+                  {formatDate(echo.createdAt)}
+                </span>
+              </div>
+              <p className="mt-1.5 whitespace-pre-wrap font-serif text-[15px] leading-7 text-[#3A3A3A]">
+                {echo.content}
+              </p>
+              <div className="mt-1.5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleLike(echo.id)}
+                  disabled={isPending}
+                  aria-label={
+                    likeStatuses[echo.id]?.liked ? "取消点赞" : "点赞"
+                  }
+                  className="inline-flex items-center gap-1 text-[11px] text-[#B0B0B0] transition-colors hover:text-[#A1887F] disabled:opacity-50"
+                >
+                  <Heart
+                    className={`h-3 w-3 transition-all duration-200 ${
+                      likeStatuses[echo.id]?.liked
+                        ? "fill-[#A1887F] text-[#A1887F]"
+                        : "fill-none"
+                    }`}
+                  />
+                  {(likeStatuses[echo.id]?.count ?? 0) > 0 && (
+                    <span>{likeStatuses[echo.id]?.count}</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
       {isLoggedIn ? (
         <form
           onSubmit={(e) => {
             e.preventDefault();
             publish();
           }}
-          className="space-y-4 rounded-sm border border-[#EFEBE9] bg-[#FAF9F6] p-5"
+          className="mt-6 flex items-center gap-3"
         >
-          <textarea
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            placeholder="写下你的回音..."
-            rows={4}
-            className="w-full resize-y border border-[#E0DAD6] bg-white px-3 py-2 text-sm leading-7 focus:border-[#A1887F] focus:outline-none"
-            required
-          />
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-[#9E9E9E]">{message}</p>
-            <div className="ml-auto flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2.5">
-                <span className="text-xs text-[#6A6A6A]">匿名发布</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={anonymous}
-                  aria-label="匿名发布"
-                  disabled={isPending}
-                  onClick={() => setAnonymous((v) => !v)}
-                  className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A1887F]/50 disabled:opacity-50 ${anonymous
-                      ? "border-[#A1887F] bg-[#A1887F]"
-                      : "border-[#D7CCC8] bg-white"
-                    }`}
-                >
-                  <span
-                    className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all duration-200 ${anonymous ? "left-5" : "left-0.5"
-                      }`}
-                  />
-                </button>
-              </div>
-              <button
-                type="submit"
-                disabled={isPending}
-                className="border border-[#A1887F] px-4 py-2 text-xs tracking-widest text-[#A1887F] transition-colors hover:bg-[#A1887F] hover:text-white disabled:opacity-60"
-              >
-                {isPending ? "发送中..." : "发送回音"}
-              </button>
-            </div>
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              placeholder="写下你的回音..."
+              className="w-full rounded-full border border-[#E0DAD6] bg-white py-2.5 pl-4 pr-12 text-sm text-[#3A3A3A] transition-colors focus:border-[#A1887F] focus:outline-none"
+              required
+            />
+            <button
+              type="submit"
+              disabled={isPending}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full p-2 text-[#A1887F] transition-colors hover:bg-[#F4EFEA] disabled:opacity-50"
+              aria-label="发送回音"
+            >
+              <Send className="h-4 w-4" />
+            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setAnonymous((v) => !v)}
+            disabled={isPending}
+            className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-colors ${
+              anonymous
+                ? "border-[#A1887F] bg-[#A1887F] text-white"
+                : "border-[#D7CCC8] text-[#9E9E9E] hover:border-[#A1887F] hover:text-[#A1887F]"
+            }`}
+          >
+            匿名
+          </button>
         </form>
       ) : (
-        <div className="rounded-sm border border-[#EFEBE9] bg-[#FAF9F6] p-5 text-sm text-[#8D8D8D]">
+        <p className="mt-6 text-center text-sm text-[#9E9E9E]">
           请先点亮身份，再留下你的星火。
-        </div>
+        </p>
       )}
 
-      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
-        {echoes.length === 0 ? (
-          <p className="text-sm text-[#9E9E9E] md:col-span-2">
-            旷野安静，等待第一声回响。
-          </p>
-        ) : (
-          echoes.map((echo, index) => (
-            <article
-              id={`echo-${echo.id}`}
-              key={echo.id}
-              className={`rounded-sm border p-5 ${index % 3 === 0
-                  ? "border-[#E8E0D8] bg-[#FDFCF9]"
-                  : index % 3 === 1
-                    ? "border-[#E3DDD8] bg-[#FAF8F5]"
-                    : "border-[#DDD6CE] bg-[#F7F5F0]"
-                }`}
-            >
-              <div className="mb-3 flex items-center justify-between text-xs text-[#9E9E9E]">
-                <span className="text-[#6A6A6A]">{echo.authorLabel}</span>
-                <span>{formatDate(echo.createdAt)}</span>
-              </div>
-
-              <p className="whitespace-pre-wrap font-serif text-[15px] leading-7 text-[#3A3A3A]">
-                {echo.content}
-              </p>
-
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={() => handleLike(echo.id)}
-                  disabled={isPending}
-                  aria-label={
-                    likeStatuses[echo.id]?.liked ? "取消点赞" : "点赞"
-                  }
-                  className="inline-flex items-center gap-1.5 text-xs text-[#9E9E9E] transition-colors hover:text-[#A1887F] disabled:opacity-50"
-                >
-                  <Heart
-                    className={`h-3.5 w-3.5 transition-all duration-200 ${likeStatuses[echo.id]?.liked
-                        ? "fill-[#A1887F] text-[#A1887F]"
-                        : "fill-none"
-                      }`}
-                  />
-                  <span>{likeStatuses[echo.id]?.count ?? 0}</span>
-                </button>
-              </div>
-            </article>
-          ))
-        )}
-      </div>
+      {message && (
+        <p className="mt-2 text-center text-xs text-[#9E9E9E]">{message}</p>
+      )}
     </section>
   );
 }

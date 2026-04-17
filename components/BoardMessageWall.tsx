@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { MessageSquareText } from "lucide-react";
+import { MessageSquare, Send } from "lucide-react";
 import { submitBoardMessage } from "@/app/actions/board";
 import type { BoardMessage } from "@/lib/board-messages";
 
@@ -62,101 +62,83 @@ export default function BoardMessageWall({
   };
 
   return (
-    <section className="space-y-10">
-      <div className="rounded-[2rem] border border-[#E7DDD4] bg-white/80 p-6 shadow-[0_18px_60px_rgba(82,66,54,0.06)] md:p-8">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="rounded-2xl bg-[#F4ECE4] p-3 text-[#A1887F]">
-            <MessageSquareText className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="font-youyou text-2xl tracking-[0.16em] text-[#3A3A3A]">
-              留一句话
-            </h2>
-            <p className="mt-1 text-sm text-[#8E8178]">
-              留言板对所有人开放阅读，只有注册过的成员可以发言。
-            </p>
-          </div>
-        </div>
-
-        {isLoggedIn ? (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              handleSubmit();
-            }}
-            className="space-y-4"
-          >
-            <textarea
-              value={content}
-              onChange={(event) => setContent(event.target.value.slice(0, 300))}
-              rows={5}
-              placeholder="写一句今天想留下的话，或者和后来的人打个招呼。"
-              className="w-full rounded-[1.5rem] border border-[#E6DDD6] bg-[#FCFBF8] px-5 py-4 font-serif text-base leading-8 text-[#423A35] outline-none transition-colors focus:border-[#B89B8C]"
-            />
-
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-[#93867E]">{feedback || "留言会立刻出现在下方。"}</p>
-              <div className="flex items-center gap-4">
-                <span className={`text-sm ${remaining < 30 ? "text-[#B85C5C]" : "text-[#93867E]"}`}>
-                  还可输入 {remaining} 字
-                </span>
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="inline-flex items-center rounded-full bg-[#A1887F] px-6 py-3 text-sm font-youyou tracking-[0.16em] text-white transition-colors hover:bg-[#8C6F64] disabled:cursor-not-allowed disabled:bg-[#C8B7B0]"
-                >
-                  {isPending ? "发送中..." : "发布留言"}
-                </button>
-              </div>
-            </div>
-          </form>
-        ) : (
-          <div className="rounded-[1.5rem] border border-dashed border-[#E2D6CD] bg-[#FBF8F4] px-5 py-6 text-[#7D7068]">
-            <p className="font-serif leading-8">
-              你可以先看看别人留下的话。想参与留言的话，需要先注册并登录。
-            </p>
-            <div className="mt-5">
-              <Link
-                href="/login"
-                className="inline-flex items-center rounded-full border border-[#CDBBB1] px-5 py-2.5 text-sm font-youyou tracking-[0.16em] text-[#5D5D5D] transition-all hover:border-[#A1887F] hover:bg-[#A1887F] hover:text-white"
-              >
-                去登录
-              </Link>
-            </div>
-          </div>
+    <section className="mt-10 border-t border-[#D7CCC8]/40 pt-10">
+      <div className="mb-6 flex items-center gap-3">
+        <MessageSquare className="h-4 w-4 text-[#A1887F]" />
+        <h2 className="font-youyou text-xl tracking-widest text-[#3A3A3A]">
+          留言
+        </h2>
+        {messages.length > 0 && (
+          <span className="text-xs text-[#9E9E9E]">{messages.length}</span>
         )}
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-0 divide-y divide-[#E8E4DF]/60">
         {messages.length === 0 ? (
-          <div className="rounded-[2rem] border border-[#E7DDD4] bg-white/70 px-6 py-12 text-center text-[#8F837B]">
+          <p className="py-6 text-center text-sm text-[#9E9E9E]">
             还没有人写下第一句话。
-          </div>
+          </p>
         ) : (
-          messages.map((message, index) => (
-            <article
+          messages.map((message) => (
+            <div
               key={message.id}
-              className={`rounded-[1.75rem] border px-6 py-5 shadow-[0_16px_40px_rgba(82,66,54,0.04)] ${
-                index % 3 === 0
-                  ? "border-[#E7DDD4] bg-[#FFFDFC]"
-                  : index % 3 === 1
-                    ? "border-[#E4DED8] bg-[#FBF8F4]"
-                    : "border-[#E1D7CF] bg-[#F8F4EF]"
-              }`}
+              className="group py-4 first:pt-0"
             >
-              <div className="mb-3 flex items-center justify-between gap-3 text-sm text-[#8E8178]">
-                <span className="font-youyou tracking-[0.12em] text-[#645850]">
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="text-[13px] font-medium text-[#5D5D5D]">
                   {message.authorLabel}
                 </span>
-                <span>{formatDate(message.createdAt)}</span>
+                <span className="shrink-0 text-[11px] text-[#B0B0B0]">
+                  {formatDate(message.createdAt)}
+                </span>
               </div>
-              <p className="whitespace-pre-wrap font-serif text-[1.02rem] leading-8 text-[#38322E]">
+              <p className="mt-1.5 whitespace-pre-wrap font-serif text-[15px] leading-7 text-[#3A3A3A]">
                 {message.content}
               </p>
-            </article>
+            </div>
           ))
         )}
       </div>
+
+      {isLoggedIn ? (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleSubmit();
+          }}
+          className="mt-6 flex items-center gap-3"
+        >
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={content}
+              onChange={(event) => setContent(event.target.value.slice(0, 300))}
+              placeholder="写一句今天想留下的话..."
+              className="w-full rounded-full border border-[#E0DAD6] bg-white py-2.5 pl-4 pr-12 text-sm text-[#3A3A3A] transition-colors focus:border-[#A1887F] focus:outline-none"
+              required
+            />
+            <button
+              type="submit"
+              disabled={isPending}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full p-2 text-[#A1887F] transition-colors hover:bg-[#F4EFEA] disabled:opacity-50"
+              aria-label="发布留言"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+          <span className={`shrink-0 text-[11px] ${remaining < 30 ? "text-[#B85C5C]" : "text-[#B0B0B0]"}`}>
+            {remaining}
+          </span>
+        </form>
+      ) : (
+        <p className="mt-6 text-center text-sm text-[#9E9E9E]">
+          请先<Link href="/login" className="text-[#A1887F] hover:text-[#8D6E63]">登录</Link>，再留下你的一句话。
+        </p>
+      )}
+
+      {feedback && (
+        <p className="mt-2 text-center text-xs text-[#9E9E9E]">{feedback}</p>
+      )}
     </section>
   );
 }
