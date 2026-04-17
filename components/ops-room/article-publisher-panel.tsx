@@ -23,6 +23,7 @@ import {
 } from '@/app/actions/articles-admin'
 import { ARTICLE_CATEGORY_OPTIONS } from '@/lib/article-categories'
 import { getIssueDisplayTitle } from '@/lib/issue-display'
+import { getCurrentOrLatestIssue, getLatestIssue } from '@/lib/issue-selection'
 import { normalizeIssueLabel } from '@/lib/issue-display'
 
 interface AdminIssueSummary {
@@ -102,41 +103,11 @@ function normalizeIssueLabelInput(input: string) {
 }
 
 function getDefaultIssueId(issues: AdminIssueSummary[]) {
-  return getAutoCurrentIssue(issues)?.id ?? issues[0]?.id ?? ''
-}
-
-function getAutoCurrentIssue(issues: AdminIssueSummary[]) {
-  const now = Date.now()
-  const publishedIssues = issues.filter((issue) => {
-    if (!issue.publishedAt) {
-      return true
-    }
-
-    const issueTime = new Date(issue.publishedAt).getTime()
-    return !Number.isNaN(issueTime) && issueTime <= now
-  })
-
-  if (publishedIssues.length === 0) {
-    return null
-  }
-
-  return [...publishedIssues].sort((left, right) => {
-    if (left.sortOrder !== right.sortOrder) {
-      return right.sortOrder - left.sortOrder
-    }
-
-    const leftTime = left.publishedAt ? new Date(left.publishedAt).getTime() : 0
-    const rightTime = right.publishedAt ? new Date(right.publishedAt).getTime() : 0
-    return rightTime - leftTime
-  })[0]
-}
-
-function getLatestCreatedIssue(issues: AdminIssueSummary[]) {
-  return [...issues].sort((left, right) => right.sortOrder - left.sortOrder)[0] ?? null
+  return getCurrentOrLatestIssue(issues)?.id ?? issues[0]?.id ?? ''
 }
 
 function getDefaultArticleListIssueId(issues: AdminIssueSummary[]) {
-  return getAutoCurrentIssue(issues)?.id ?? getLatestCreatedIssue(issues)?.id ?? issues[0]?.id ?? ''
+  return getCurrentOrLatestIssue(issues)?.id ?? issues[0]?.id ?? ''
 }
 
 function getIssueTimingState(publishedAt: string | null) {
@@ -236,7 +207,7 @@ export default function ArticlePublisherPanel() {
     }
 
     const nextIssues = issuesResult.data ?? []
-    const nextCurrentIssue = getAutoCurrentIssue(nextIssues)
+    const nextCurrentIssue = getCurrentOrLatestIssue(nextIssues)
 
     setIssues(nextIssues)
     setCurrentIssue(nextCurrentIssue)
@@ -537,7 +508,7 @@ export default function ArticlePublisherPanel() {
 
   const selectedIssue = issues.find((issue) => issue.id === issueId) ?? null
   const browsedIssue = issues.find((issue) => issue.id === articleListIssueId) ?? null
-  const latestCreatedIssue = getLatestCreatedIssue(issues)
+  const latestCreatedIssue = getLatestIssue(issues)
   const isRefreshing = loadingIssues || loadingArticles
   const articlePanelLoading = loadingIssues || loadingArticles
 

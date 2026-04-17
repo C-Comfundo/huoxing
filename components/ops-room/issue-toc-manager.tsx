@@ -27,6 +27,7 @@ import {
   type AdminTocSection,
 } from '@/app/actions/toc-admin'
 import { getIssueDisplayTitle } from '@/lib/issue-display'
+import { getCurrentOrLatestIssue } from '@/lib/issue-selection'
 
 interface TocManagerIssue {
   id: string
@@ -44,9 +45,7 @@ interface IssueTocManagerProps {
 }
 
 function getDefaultIssueId(issues: TocManagerIssue[]) {
-  const currentIssue = issues.find((issue) => issue.isCurrent)
-  if (currentIssue) return currentIssue.id
-  return [...issues].sort((l, r) => r.sortOrder - l.sortOrder)[0]?.id ?? ''
+  return getCurrentOrLatestIssue(issues)?.id ?? ''
 }
 
 function getIssueStatusLabel(issue: TocManagerIssue | null) {

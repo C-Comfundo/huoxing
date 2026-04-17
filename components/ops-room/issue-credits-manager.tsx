@@ -23,6 +23,7 @@ import {
   type AdminCreditMember,
 } from '@/app/actions/credits-admin'
 import { getIssueDisplayTitle } from '@/lib/issue-display'
+import { getCurrentOrLatestIssue } from '@/lib/issue-selection'
 
 interface CreditsManagerIssue {
   id: string
@@ -40,9 +41,7 @@ interface IssueCreditsManagerProps {
 }
 
 function getDefaultIssueId(issues: CreditsManagerIssue[]) {
-  const currentIssue = issues.find((issue) => issue.isCurrent)
-  if (currentIssue) return currentIssue.id
-  return [...issues].sort((l, r) => r.sortOrder - l.sortOrder)[0]?.id ?? ''
+  return getCurrentOrLatestIssue(issues)?.id ?? ''
 }
 
 export default function IssueCreditsManager({ issues, loginPath }: IssueCreditsManagerProps) {

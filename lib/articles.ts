@@ -6,6 +6,7 @@ import {
   getArticleCategoryAliases,
   normalizeArticleCategory,
 } from "@/lib/article-categories";
+import { getLatestIssue } from "@/lib/issue-selection";
 
 export interface Issue {
   id: string;
@@ -180,6 +181,15 @@ function mapIssue(row: RawIssueRow | null | undefined): Issue | null {
   };
 }
 
+function markCurrentIssue(issues: Issue[]) {
+  const currentIssueId = getLatestIssue(issues)?.id ?? null;
+
+  return issues.map((issue) => ({
+    ...issue,
+    isCurrent: issue.id === currentIssueId,
+  }));
+}
+
 function getPublishCutoffIso() {
   return new Date().toISOString();
 }
@@ -190,6 +200,31 @@ function applyPublicIssueVisibility(query: DatabaseClient, nowIso: string) {
 
 function applyPublicIssueRelationVisibility(query: DatabaseClient, nowIso: string) {
   return query.not("issue.published_at", "is", null).lte("issue.published_at", nowIso);
+}
+
+function applyCurrentIssueSort(query: DatabaseClient) {
+  return query
+    .order("sort_order", { ascending: false })
+    .order("published_at", { ascending: false })
+    .order("created_at", { ascending: false });
+}
+
+async function getCurrentPublicIssueId(nowIso: string) {
+  const { data, error } = await runPublicQuery<Pick<RawIssueRow, "id">>((db) =>
+    applyCurrentIssueSort(
+      applyPublicIssueVisibility(db.from("issues").select("id"), nowIso)
+    )
+      .limit(1)
+      .maybeSingle()
+  );
+
+  if (error) {
+    console.error("[getCurrentPublicIssueId] 获取当前刊 ID 失败:", error);
+    return null;
+  }
+
+  const issueId = String(data?.id ?? "");
+  return issueId || null;
 }
 
 function mapArticle(row: RawArticleRow): Article {
@@ -300,7 +335,11 @@ export async function getAllIssues(): Promise<Issue[]> {
     return [];
   }
 
-  return data.map((row) => mapIssue(row)).filter((issue): issue is Issue => Boolean(issue));
+  const issues = data
+    .map((row) => mapIssue(row))
+    .filter((issue): issue is Issue => Boolean(issue));
+
+  return markCurrentIssue(issues);
 }
 
 export async function getArchivedIssues() {
@@ -311,9 +350,9 @@ export async function getArchivedIssues() {
 export async function getCurrentIssue(): Promise<Issue | null> {
   const nowIso = getPublishCutoffIso();
   const { data, error } = await runPublicQuery<RawIssueRow>((db) =>
-    applyPublicIssueVisibility(db.from("issues").select(ISSUE_SELECT), nowIso)
-      .order("sort_order", { ascending: false })
-      .order("created_at", { ascending: false })
+    applyCurrentIssueSort(
+      applyPublicIssueVisibility(db.from("issues").select(ISSUE_SELECT), nowIso)
+    )
       .limit(1)
       .maybeSingle()
   );
@@ -323,22 +362,35 @@ export async function getCurrentIssue(): Promise<Issue | null> {
     return null;
   }
 
-  return mapIssue(data);
+  const issue = mapIssue(data);
+  return issue ? { ...issue, isCurrent: true } : null;
 }
 
 export async function getIssueBySlug(slug: string): Promise<Issue | null> {
   const nowIso = getPublishCutoffIso();
-  const { data, error } = await runPublicQuery<RawIssueRow>((db) =>
-    applyPublicIssueVisibility(db.from("issues").select(ISSUE_SELECT).eq("slug", slug), nowIso)
-      .maybeSingle()
-  );
+  const [{ data, error }, currentIssueId] = await Promise.all([
+    runPublicQuery<RawIssueRow>((db) =>
+      applyPublicIssueVisibility(db.from("issues").select(ISSUE_SELECT).eq("slug", slug), nowIso)
+        .maybeSingle()
+    ),
+    getCurrentPublicIssueId(nowIso),
+  ]);
 
   if (error) {
     console.error("[getIssueBySlug] 获取刊号失败:", error);
     return null;
   }
 
-  return mapIssue(data);
+  const issue = mapIssue(data);
+
+  if (!issue) {
+    return null;
+  }
+
+  return {
+    ...issue,
+    isCurrent: issue.id === currentIssueId,
+  };
 }
 
 function resolveIssueIdOption(options?: { issueId?: string | null }) {

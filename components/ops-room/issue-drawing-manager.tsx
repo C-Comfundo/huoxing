@@ -12,6 +12,7 @@ import {
   type AdminIssueDrawing,
 } from '@/app/actions/drawing-admin'
 import { getIssueDisplayTitle } from '@/lib/issue-display'
+import { getCurrentOrLatestIssue } from '@/lib/issue-selection'
 
 interface DrawingManagerIssue {
   id: string
@@ -29,13 +30,7 @@ interface IssueDrawingManagerProps {
 }
 
 function getDefaultIssueId(issues: DrawingManagerIssue[]) {
-  const currentIssue = issues.find((issue) => issue.isCurrent)
-
-  if (currentIssue) {
-    return currentIssue.id
-  }
-
-  return [...issues].sort((left, right) => right.sortOrder - left.sortOrder)[0]?.id ?? ''
+  return getCurrentOrLatestIssue(issues)?.id ?? ''
 }
 
 function getIssueStatusLabel(issue: DrawingManagerIssue | null) {
