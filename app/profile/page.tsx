@@ -22,6 +22,7 @@ import {
   type FavoritedArticle,
   type LikedItem,
 } from '@/app/actions/profile-data'
+import { getAuthorArticlesSearchHref } from '@/lib/author-search'
 
 type Tab = 'favorites' | 'likes'
 
@@ -220,32 +221,45 @@ function FavoritesList({ items }: { items: FavoritedArticle[] }) {
 
   return (
     <div className="space-y-3">
-      {items.map((item) => (
-        <Link
-          key={item.articleId}
-          href={`/articles/${item.slug}`}
-          className="group block rounded-xl border border-[#E8E4DF] bg-white/60 p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <h3 className="truncate font-youyou text-base text-[#3A3A3A] transition-colors group-hover:text-[#A1887F]">
-                {item.title}
-              </h3>
-              <div className="mt-2 flex items-center gap-3 text-xs text-[#8D8D8D]">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1 w-1 rounded-full bg-[#D7CCC8]" />
-                  {item.category}
-                </span>
-                <span>作者：{item.author}</span>
+      {items.map((item) => {
+        const authorHref = getAuthorArticlesSearchHref(item.author)
+        return (
+          <div
+            key={item.articleId}
+            className="group rounded-xl border border-[#E8E4DF] bg-white/60 p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <Link href={`/articles/${item.slug}`} className="block">
+                  <h3 className="truncate font-youyou text-base text-[#3A3A3A] transition-colors group-hover:text-[#A1887F]">
+                    {item.title}
+                  </h3>
+                </Link>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#8D8D8D]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-1 w-1 rounded-full bg-[#D7CCC8]" />
+                    {item.category}
+                  </span>
+                  <span>
+                    作者：
+                    {authorHref ? (
+                      <Link href={authorHref} className="hover:text-[#A1887F] hover:underline underline-offset-4">
+                        {item.author}
+                      </Link>
+                    ) : (
+                      item.author
+                    )}
+                  </span>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2 text-xs text-[#BCAAA4]">
+                <Bookmark className="h-3.5 w-3.5" />
+                <span>{formatDate(item.favoritedAt)}</span>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2 text-xs text-[#BCAAA4]">
-              <Bookmark className="h-3.5 w-3.5" />
-              <span>{formatDate(item.favoritedAt)}</span>
-            </div>
           </div>
-        </Link>
-      ))}
+        )
+      })}
     </div>
   )
 }
