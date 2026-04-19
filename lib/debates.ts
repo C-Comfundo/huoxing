@@ -1,6 +1,7 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 
 export type DebateSide = "pro" | "con";
 
@@ -35,6 +36,18 @@ type RawRow = Record<string, unknown>;
 
 function toText(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+function getPublicClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error("[debates] Missing Supabase env configuration");
+    return null;
+  }
+
+  return createSupabaseClient(supabaseUrl, supabaseAnonKey);
 }
 
 function toSide(value: unknown): DebateSide {
@@ -80,7 +93,12 @@ function mapComment(
 async function getDebateTopicSummariesInternal(
   issueId: string
 ): Promise<DebateTopicSummary[]> {
-  const supabase = createClient();
+  const supabase = getPublicClient();
+
+  if (!supabase) {
+    return [];
+  }
+
   const nowIso = new Date().toISOString();
   const { data: linkRows, error: linksError } = await supabase
     .from("debate_topic_issue_links")
@@ -155,7 +173,7 @@ export async function getDebateTopicsByIssueId(
     return [];
   }
 
-  const supabase = createClient();
+  const supabase = createServerClient();
   const topicIds = topics.map((topic) => topic.id);
   const { data: commentsData, error: commentsError } = await supabase
     .from("debate_comments")

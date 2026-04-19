@@ -14,9 +14,17 @@ export const revalidate = 60;
 export default async function Home() {
   const currentIssue = await getCurrentIssue();
   const nowMs = Date.now();
-  const debateTopics = currentIssue
-    ? await getDebateTopicSummariesByIssueId(currentIssue.id)
-    : [];
+  let debateTopics = [] as Awaited<ReturnType<typeof getDebateTopicSummariesByIssueId>>;
+  let tocSections = [] as Awaited<ReturnType<typeof getIssueTOC>>;
+  let credits = null as Awaited<ReturnType<typeof getIssueCredits>>;
+
+  if (currentIssue) {
+    [debateTopics, tocSections, credits] = await Promise.all([
+      getDebateTopicSummariesByIssueId(currentIssue.id),
+      getIssueTOC(currentIssue.id),
+      getIssueCredits(currentIssue.id),
+    ]);
+  }
   const debateEntries =
     currentIssue && debateTopics.length > 0
       ? debateTopics
@@ -41,12 +49,6 @@ export default async function Home() {
             return priority[a.status] - priority[b.status];
           })
       : [];
-  const tocSections = currentIssue
-    ? await getIssueTOC(currentIssue.id)
-    : [];
-  const credits = currentIssue
-    ? await getIssueCredits(currentIssue.id)
-    : null;
   const heroCoverImage = getPreferredPublicImagePath(currentIssue?.coverImage) ?? "/poster.webp";
 
   return (

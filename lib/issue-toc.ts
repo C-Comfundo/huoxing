@@ -42,6 +42,18 @@ function isDrawingSection(displayName: string) {
   return displayName.includes("画里有话") || displayName.includes("画里话外");
 }
 
+function getSectionCustomHref(displayName: string, issueSlug?: string) {
+  if (isDrawingSection(displayName)) {
+    return issueSlug ? `/issues/${issueSlug}/drawing` : "/drawing";
+  }
+
+  if (displayName.includes("辩题") || displayName.includes("以辩会友")) {
+    return issueSlug ? `/issues/${issueSlug}/debate` : "/debate";
+  }
+
+  return undefined;
+}
+
 /**
  * Fetch the full table of contents for an issue.
  * RLS ensures only published-issue data is returned.
@@ -57,15 +69,19 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
     return [];
   }
 
-  // 1. Fetch sections for this issue
-  const { data: sectionRows, error: secError } = await supabase
-    .from("issue_toc_sections")
-    .select("id, display_name, sort_order, is_standalone")
-    .eq("issue_id", issueId)
-    .order("sort_order", { ascending: true });
+  const [{ data: sectionRows, error: secError }, { data: issueRow, error: issueError }] =
+    await Promise.all([
+      supabase
+        .from("issue_toc_sections")
+        .select("id, display_name, sort_order, is_standalone")
+        .eq("issue_id", issueId)
+        .order("sort_order", { ascending: true }),
+      supabase.from("issues").select("slug").eq("id", issueId).maybeSingle(),
+    ]);
 
-  const { data: issueRow } = await supabase.from("issues").select("slug").eq("id", issueId).single();
-  const issueSlug = issueRow?.slug;
+  if (issueError) {
+    console.error("[getIssueTOC] 获取刊号 slug 失败:", issueError);
+  }
 
   if (secError || !sectionRows || sectionRows.length === 0) {
     if (secError) {
@@ -74,35 +90,46 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
     return [];
   }
 
-  const sectionIds = (sectionRows as RawSectionRow[]).map((row) =>
-    String(row.id ?? "")
-  );
+  const normalizedSectionRows = sectionRows as RawSectionRow[];
+  const issueSlug = toText(issueRow?.slug);
+  const sectionIds = normalizedSectionRows
+    .map((row) => String(row.id ?? ""))
+    .filter(Boolean);
 
-  // 2. Fetch all items for these sections in one query
-  const { data: itemRows, error: itemError } = await supabase
-    .from("issue_toc_items")
-    .select("id, section_id, title, author, sort_order")
-    .in("section_id", sectionIds)
-    .order("sort_order", { ascending: true });
+  if (sectionIds.length === 0) {
+    return [];
+  }
+
+  const [{ data: itemRows, error: itemError }, { data: articles, error: articlesError }] =
+    await Promise.all([
+      supabase
+        .from("issue_toc_items")
+        .select("id, section_id, title, author, sort_order")
+        .in("section_id", sectionIds)
+        .order("sort_order", { ascending: true }),
+      supabase.from("articles").select("title, slug").eq("issue_id", issueId),
+    ]);
 
   if (itemError) {
     console.error("[getIssueTOC] 获取目录条目失败:", itemError);
   }
 
-  // 2.5 Fetch articles for this issue to map their slugs by title
-  const { data: articles } = await supabase
-    .from("articles")
-    .select("title, slug")
-    .eq("issue_id", issueId);
+  if (articlesError) {
+    console.error("[getIssueTOC] 获取本期文章 slug 失败:", articlesError);
+  }
 
   const articleMap = new Map<string, string>();
-  for (const a of (articles as Array<{ title?: string; slug?: string }> | null) ?? []) {
-    if (a.title && a.slug) {
-      articleMap.set(a.title.trim(), a.slug);
+  for (const article of (articles as Array<{ title?: string; slug?: string }> | null) ?? []) {
+    if (article.title && article.slug) {
+      articleMap.set(article.title.trim(), article.slug);
     }
   }
 
-  // 3. Group items by section_id
+  const sectionById = new Map<string, RawSectionRow>();
+  for (const row of normalizedSectionRows) {
+    sectionById.set(String(row.id ?? ""), row);
+  }
+
   const itemsBySectionId = new Map<string, TOCItem[]>();
 
   for (const row of (itemRows as RawItemRow[] | null) ?? []) {
@@ -112,25 +139,16 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
       continue;
     }
 
-    let customHref: string | undefined;
-    const sectionRow = (sectionRows as RawSectionRow[]).find(s => s.id === sectionId);
+    const sectionRow = sectionById.get(sectionId);
     const displayName = sectionRow ? toText(sectionRow.display_name) : "";
-    if (isDrawingSection(displayName)) {
-      customHref = issueSlug ? `/issues/${issueSlug}/drawing` : "/drawing";
-    } else if (displayName.includes("辩题") || displayName.includes("以辩会友")) {
-      customHref = issueSlug ? `/issues/${issueSlug}/debate` : "/debate";
-    }
-
     const title = toText(row.title);
-    const author = toText(row.author);
-
     const item: TOCItem = {
       id: String(row.id ?? ""),
       title,
-      author,
+      author: toText(row.author),
       sortOrder: Number(row.sort_order ?? 0),
       articleSlug: articleMap.get(title.trim()),
-      customHref,
+      customHref: getSectionCustomHref(displayName, issueSlug || undefined),
     };
 
     const items = itemsBySectionId.get(sectionId) ?? [];
@@ -138,29 +156,17 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
     itemsBySectionId.set(sectionId, items);
   }
 
-  // 4. Assemble sections with their items
-  return (sectionRows as RawSectionRow[]).map((row) => {
+  return normalizedSectionRows.map((row) => {
     const id = String(row.id ?? "");
     const displayName = toText(row.display_name);
-    
-    let customHref: string | undefined;
-    if (isDrawingSection(displayName)) {
-      customHref = issueSlug ? `/issues/${issueSlug}/drawing` : "/drawing";
-    } else if (displayName.includes("辩题") || displayName.includes("以辩会友")) {
-      customHref = issueSlug ? `/issues/${issueSlug}/debate` : "/debate";
-    }
-
-    let items = itemsBySectionId.get(id) ?? [];
-
-
 
     return {
       id,
       displayName,
       sortOrder: Number(row.sort_order ?? 0),
       isStandalone: Boolean(row.is_standalone),
-      items,
-      customHref,
+      items: itemsBySectionId.get(id) ?? [],
+      customHref: getSectionCustomHref(displayName, issueSlug || undefined),
     };
   });
 }

@@ -202,47 +202,70 @@ export async function getIssueDrawingsByIssueId(issueId: string): Promise<IssueD
     return [];
   }
 
-  const drawings: IssueDrawing[] = [];
+  const drawingIds = drawingRows
+    .map((drawingRow) => String(drawingRow.id ?? ""))
+    .filter(Boolean);
 
-  for (const drawingRow of drawingRows) {
-    const drawingId = String(drawingRow.id ?? "");
-
-    const [{ data: imageRows, error: imageError }, { count: commentCount, error: commentError }] =
-      await Promise.all([
-        runPublicQuery<RawRow[]>((db) =>
-          db
-            .from("issue_drawing_images")
-            .select(ISSUE_DRAWING_IMAGE_SELECT)
-            .eq("drawing_id", drawingId)
-            .order("sort_order", { ascending: true })
-            .order("created_at", { ascending: true })
-        ),
-        runPublicQuery<null>((db) =>
-          db
-            .from("issue_drawing_comments")
-            .select("id", { count: "exact", head: true })
-            .eq("drawing_id", drawingId)
-        ),
-      ]);
-
-    if (imageError) {
-      console.error("[getIssueDrawingsByIssueId] Failed to load drawing images:", imageError);
-    }
-
-    if (commentError) {
-      console.error("[getIssueDrawingsByIssueId] Failed to load drawing comment count:", commentError);
-    }
-
-    drawings.push(
-      mapIssueDrawing(
-        drawingRow,
-        imageError ? [] : (imageRows ?? []).map(mapIssueDrawingImage),
-        Number(commentCount ?? 0)
-      )
-    );
+  if (drawingIds.length === 0) {
+    return [];
   }
 
-  return drawings;
+  const [{ data: imageRows, error: imageError }, { data: commentRows, error: commentError }] =
+    await Promise.all([
+      runPublicQuery<RawRow[]>((db) =>
+        db
+          .from("issue_drawing_images")
+          .select(ISSUE_DRAWING_IMAGE_SELECT)
+          .in("drawing_id", drawingIds)
+          .order("drawing_id", { ascending: true })
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true })
+      ),
+      runPublicQuery<RawRow[]>((db) =>
+        db
+          .from("issue_drawing_comments")
+          .select("id, drawing_id")
+          .in("drawing_id", drawingIds)
+      ),
+    ]);
+
+  if (imageError) {
+    console.error("[getIssueDrawingsByIssueId] Failed to load drawing images:", imageError);
+  }
+
+  if (commentError) {
+    console.error("[getIssueDrawingsByIssueId] Failed to load drawing comment counts:", commentError);
+  }
+
+  const imagesByDrawingId = new Map<string, IssueDrawingImage[]>();
+
+  for (const row of (imageRows ?? []).map(mapIssueDrawingImage)) {
+    const items = imagesByDrawingId.get(row.drawingId) ?? [];
+    items.push(row);
+    imagesByDrawingId.set(row.drawingId, items);
+  }
+
+  const commentCounts = new Map<string, number>();
+
+  for (const row of (commentRows as RawRow[] | null) ?? []) {
+    const drawingId = String(row.drawing_id ?? "");
+
+    if (!drawingId) {
+      continue;
+    }
+
+    commentCounts.set(drawingId, (commentCounts.get(drawingId) ?? 0) + 1);
+  }
+
+  return drawingRows.map((drawingRow) => {
+    const drawingId = String(drawingRow.id ?? "");
+
+    return mapIssueDrawing(
+      drawingRow,
+      imageError ? [] : imagesByDrawingId.get(drawingId) ?? [],
+      commentCounts.get(drawingId) ?? 0
+    );
+  });
 }
 
 export async function hasIssueDrawing(issueId: string): Promise<boolean> {

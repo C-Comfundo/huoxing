@@ -1,5 +1,5 @@
-const STATIC_CACHE = "spark-static-v1";
-const DOCUMENT_CACHE = "spark-documents-v1";
+const OFFLINE_CACHE = "spark-offline-v2";
+const ASSET_CACHE = "spark-assets-v2";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_URLS = [
@@ -11,26 +11,15 @@ const PRECACHE_URLS = [
   "/icons/apple-touch-icon.png",
 ];
 
-const PUBLIC_DOCUMENT_PATTERNS = [
-  /^\/$/,
-  /^\/about\/?$/,
-  /^\/contact\/?$/,
-  /^\/issues\/?$/,
-  /^\/issues\/[^/]+\/?$/,
-  /^\/articles\/[^/]+\/?$/,
-  /^\/slow-talk\/?$/,
-  /^\/slow-talk\/[^/]+\/?$/,
-  /^\/theater\/?$/,
-  /^\/theater\/[^/]+\/?$/,
-  /^\/nonsense\/?$/,
-  /^\/nonsense\/[^/]+\/?$/,
-  /^\/poems\/?$/,
-  /^\/letters\/?$/,
+const CACHEABLE_ASSET_DESTINATIONS = new Set(["image", "manifest"]);
+const CACHEABLE_ASSET_PATTERNS = [
+  /^\/icons\/.+/,
+  /^\/poster\.(jpg|webp)$/,
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
+    caches.open(OFFLINE_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
   );
   self.skipWaiting();
 });
@@ -41,7 +30,7 @@ self.addEventListener("activate", (event) => {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames
-          .filter((cacheName) => ![STATIC_CACHE, DOCUMENT_CACHE].includes(cacheName))
+          .filter((cacheName) => ![OFFLINE_CACHE, ASSET_CACHE].includes(cacheName))
           .map((cacheName) => caches.delete(cacheName))
       );
 
@@ -67,52 +56,38 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (request.mode === "navigate" && isPublicDocumentPath(url.pathname)) {
-    event.respondWith(handleDocumentRequest(request));
+  if (request.mode === "navigate") {
+    event.respondWith(handleNavigationRequest(request));
     return;
   }
 
-  if (isStaticAssetRequest(request, url.pathname)) {
-    event.respondWith(handleStaticAssetRequest(event, request));
+  if (isCacheableAssetRequest(request, url.pathname)) {
+    event.respondWith(handleAssetRequest(request));
   }
 });
 
-function isPublicDocumentPath(pathname) {
-  return PUBLIC_DOCUMENT_PATTERNS.some((pattern) => pattern.test(pathname));
-}
-
-function isStaticAssetRequest(request, pathname) {
-  if (pathname.startsWith("/_next/static/")) {
-    return true;
-  }
-
+function isCacheableAssetRequest(request, pathname) {
   const destination = request.destination;
 
-  if (["style", "script", "font", "image", "manifest"].includes(destination)) {
+  if (pathname.startsWith("/_next/")) {
+    return false;
+  }
+
+  if (["script", "style", "font", "worker", "audio", "video", "track"].includes(destination)) {
+    return false;
+  }
+
+  if (CACHEABLE_ASSET_DESTINATIONS.has(destination)) {
     return true;
   }
 
-  return /^\/icons\/.+/.test(pathname);
+  return CACHEABLE_ASSET_PATTERNS.some((pattern) => pattern.test(pathname));
 }
 
-async function handleDocumentRequest(request) {
-  const cache = await caches.open(DOCUMENT_CACHE);
-
+async function handleNavigationRequest(request) {
   try {
-    const response = await fetch(request);
-
-    if (response.ok) {
-      await cache.put(request, response.clone());
-    }
-
-    return response;
+    return await fetch(request);
   } catch (error) {
-    const cachedResponse = await cache.match(request);
-
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
     const offlineResponse = await caches.match(OFFLINE_URL);
     if (offlineResponse) {
       return offlineResponse;
@@ -125,33 +100,39 @@ async function handleDocumentRequest(request) {
   }
 }
 
-async function handleStaticAssetRequest(event, request) {
-  const cache = await caches.open(STATIC_CACHE);
+async function handleAssetRequest(request) {
+  const cache = await caches.open(ASSET_CACHE);
   const cachedResponse = await cache.match(request);
 
-  const networkResponsePromise = fetch(request)
-    .then((response) => {
-      if (response.ok) {
-        void cache.put(request, response.clone());
-      }
-
-      return response;
-    })
-    .catch(() => null);
-
   if (cachedResponse) {
-    event.waitUntil(networkResponsePromise);
+    void refreshAsset(cache, request);
     return cachedResponse;
   }
 
-  const networkResponse = await networkResponsePromise;
+  try {
+    const response = await fetch(request);
 
-  if (networkResponse) {
-    return networkResponse;
+    if (response.ok) {
+      await cache.put(request, response.clone());
+    }
+
+    return response;
+  } catch (error) {
+    return new Response("", {
+      status: 504,
+      statusText: "Gateway Timeout",
+    });
   }
+}
 
-  return new Response("", {
-    status: 504,
-    statusText: "Gateway Timeout",
-  });
+async function refreshAsset(cache, request) {
+  try {
+    const response = await fetch(request);
+
+    if (response.ok) {
+      await cache.put(request, response.clone());
+    }
+  } catch (error) {
+    // Keep the cached asset when refresh fails.
+  }
 }
