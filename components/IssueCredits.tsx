@@ -1,49 +1,16 @@
 import React from "react";
 import { Paperclip } from "lucide-react";
-
-interface TeamMember {
-  department: string;
-  names: string;
-}
-
-interface IssueCredit {
-  title: string;
-  teams: TeamMember[];
-  message: string;
-}
-
-export const CREDITS_DATA: Record<string, IssueCredit> = {
-  "v3": {
-    title: "第三看 《月经》制作团队",
-    teams: [
-      { department: "站长", names: "Ray" },
-      {
-        department: "编辑部",
-        names: "Anna、Cyan、白英、冰淇淋、抽抽、蓝、GUAGUA、萧萧、新平小英俊、朱古力",
-      },
-      { department: "技术部", names: "疯丫梨、Lsly、点点、eve" },
-      { department: "视觉部", names: "椰树、白木、夳羊" },
-      {
-        department: "宣发部",
-        names: "晕碳、不不、冬眠、叽叽、KK、母狮、特离谱",
-      },
-    ],
-    message: "感谢每一位读者与支持者！",
-  },
-};
+import type { IssueCredit } from "@/lib/issue-credits";
 
 interface IssueCreditsProps {
-  issueSlug?: string | null;
+  data?: IssueCredit | null;
 }
 
 const NOISE_BG =
   'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")';
 
-export default function IssueCredits({ issueSlug }: IssueCreditsProps) {
-  if (!issueSlug) return null;
-
-  const data = CREDITS_DATA[issueSlug];
-  if (!data) return null;
+export default function IssueCredits({ data }: IssueCreditsProps) {
+  if (!data || data.members.length === 0) return null;
 
   return (
     <div className="relative mt-8 mx-auto max-w-4xl rounded-xl bg-[#FDFBF7] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E3D8D0]/60 sm:p-10 rotate-[0.5deg] hover:rotate-0 transition-transform duration-500">
@@ -74,19 +41,19 @@ export default function IssueCredits({ issueSlug }: IssueCreditsProps) {
         </h3>
 
         <div className="w-full max-w-2xl space-y-4">
-          {data.teams.map((team) => (
+          {data.members.map((member) => (
             <div
-              key={team.department}
+              key={member.id}
               className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-6 group"
             >
               <div className="w-16 sm:w-20 shrink-0 text-left sm:text-right">
                 <span className="text-[#8D6E63] font-serif text-sm md:text-base tracking-[0.15em] font-medium opacity-90 relative inline-block">
-                  {team.department}
+                  {member.department}
                   <span className="hidden sm:inline-block absolute -right-3 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-[#A1887F]/50" />
                 </span>
               </div>
               <div className="flex-1 text-[#5C4D43] text-[0.95rem] md:text-base leading-relaxed pl-2 border-l-[2px] border-dotted border-[#D7CCC8]/40 sm:border-none sm:pl-0">
-                {team.names}
+                {member.names}
               </div>
             </div>
           ))}

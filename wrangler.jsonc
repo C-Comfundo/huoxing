@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "xinghuohaokan",
+  "compatibility_date": "2026-04-14",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "images": {
+    "binding": "IMAGES"
+  },
+  "vars": {
+    "RESEND_FROM_EMAIL": "星火投稿 <submissions@send.aifnd.top>",
+    "EDITORIAL_SUBMISSIONS_EMAIL": "sousougelu2025@163.com",
+    "NEXT_PUBLIC_APP_URL": "https://xinghuohaokan.com"
+  }
+}

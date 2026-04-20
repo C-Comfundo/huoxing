@@ -23,6 +23,7 @@ export interface DrawingComment {
 interface SubmitDrawingCommentInput {
   issueId: string;
   issueSlug: string;
+  drawingId: string;
   content: string;
   isAnonymous?: boolean;
 }
@@ -109,9 +110,9 @@ function revalidateDrawingPaths(issueSlug: string) {
 
 
 export async function fetchDrawingComments(
-  issueId: string
+  drawingId: string
 ): Promise<DrawingComment[]> {
-  if (!issueId) {
+  if (!drawingId) {
     return [];
   }
 
@@ -125,7 +126,7 @@ export async function fetchDrawingComments(
     supabase
       .from("issue_drawing_comments")
       .select("*")
-      .eq("issue_id", issueId)
+      .eq("drawing_id", drawingId)
       .order("created_at", { ascending: true }),
     supabase.auth.getUser(),
   ]);
@@ -227,10 +228,19 @@ export async function submitDrawingComment(
     };
   }
 
+  const drawingId = input.drawingId?.trim();
+
+  if (!drawingId) {
+    return {
+      success: false,
+      message: "作品信息无效",
+    };
+  }
+
   const { data: drawingRow, error: drawingError } = await supabase
     .from("issue_drawings")
     .select("id")
-    .eq("issue_id", issueId)
+    .eq("id", drawingId)
     .maybeSingle();
 
   if (drawingError || !drawingRow) {
@@ -247,6 +257,7 @@ export async function submitDrawingComment(
     .from("issue_drawing_comments")
     .insert({
       issue_id: issueId,
+      drawing_id: drawingId,
       content,
       user_id: user.id,
       is_anonymous: isAnonymous,

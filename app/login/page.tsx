@@ -9,6 +9,7 @@ import { ArrowLeft, Eye, EyeOff, Sparkles } from 'lucide-react'
 
 type AuthMode = 'login' | 'register' | 'forgot'
 const FORGOT_PASSWORD_COOLDOWN_SECONDS = 60
+const FORGOT_PASSWORD_REDIRECT_PATH = '/reset-password-entry'
 
 function getForgotPasswordErrorMessage(message?: string) {
   if (!message) {
@@ -122,7 +123,9 @@ function LoginPageContent() {
       return
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail)
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: `${window.location.origin}${FORGOT_PASSWORD_REDIRECT_PATH}`,
+    })
 
     if (error) {
       console.error('[resetPasswordForEmail] 发送重置邮件失败:', error)

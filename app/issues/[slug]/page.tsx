@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import ArticleCard from "@/components/ArticleCard";
 import IssueBadge from "@/components/IssueBadge";
 import Navbar from "@/components/Navbar";
+import IssueArchiveTOC from "@/components/IssueArchiveTOC";
+import type { ArchiveSection } from "@/components/IssueArchiveTOC";
 import type { Article } from "@/lib/articles";
 import {
   getArticlesByIssue,
@@ -10,8 +12,10 @@ import {
   getIssuePageCategoryHeadingParts,
   groupArticlesByCategory,
 } from "@/lib/articles";
-import { getIssueDrawingByIssueId } from "@/lib/issue-drawings";
+import { getIssueDrawingsByIssueId } from "@/lib/issue-drawings";
 import { getIssueDisplayTitle } from "@/lib/issue-display";
+import { getIssueCredits } from "@/lib/issue-credits";
+import IssueCredits from "@/components/IssueCredits";
 
 export const revalidate = 60;
 
@@ -39,6 +43,8 @@ interface PageProps {
   };
 }
 
+/* ── Current-issue: expanded card layout ── */
+
 type ArticleCategoryGroup = [string, Article[]];
 
 interface IssueCategoryRow {
@@ -50,33 +56,23 @@ function buildIssueCategoryRows(groups: ArticleCategoryGroup[]): IssueCategoryRo
   let pendingSingleCardGroups: ArticleCategoryGroup[] = [];
 
   const flushSingleCardGroups = () => {
-    if (pendingSingleCardGroups.length === 0) {
-      return;
-    }
-
+    if (pendingSingleCardGroups.length === 0) return;
     rows.push({ groups: pendingSingleCardGroups });
     pendingSingleCardGroups = [];
   };
 
   for (const group of groups) {
     const [, categoryArticles] = group;
-
     if (categoryArticles.length === 1) {
       pendingSingleCardGroups.push(group);
-
-      if (pendingSingleCardGroups.length === 2) {
-        flushSingleCardGroups();
-      }
-
+      if (pendingSingleCardGroups.length === 2) flushSingleCardGroups();
       continue;
     }
-
     flushSingleCardGroups();
     rows.push({ groups: [group] });
   }
 
   flushSingleCardGroups();
-
   return rows;
 }
 
@@ -116,16 +112,43 @@ function IssueCategorySection({
       <div className={cardGridClassName}>
         {categoryArticles.map((article) => (
           <div key={article.id} id={`article-${article.slug}`} className="scroll-mt-32">
-            <ArticleCard
-              article={article}
-              showReadMore
-              extendedCategoryLabel
-            />
+            <ArticleCard article={article} showReadMore extendedCategoryLabel />
           </div>
         ))}
       </div>
     </section>
   );
+}
+
+/* ── Archived-issue: collapsible TOC ── */
+
+function buildArchiveSections(
+  groups: [string, Article[]][],
+  issueSlug: string
+): ArchiveSection[] {
+  return groups.map(([category, categoryArticles]) => {
+    const heading = getIssuePageCategoryHeadingParts(category);
+
+    // Drawing and debate sections link directly instead of expanding
+    const isDrawing = category === "画里话外" || category === "画里有话";
+    const directHref = isDrawing ? `/issues/${issueSlug}/drawing` : undefined;
+
+    return {
+      category,
+      title: heading.title,
+      subtitle: heading.subtitle,
+      directHref,
+      articles: categoryArticles.map((a) => ({
+        id: a.id,
+        slug: a.slug,
+        title: a.title,
+        author: a.author,
+        viewCount: a.viewCount,
+        echoCount: a.echoCount,
+        href: a.customHref ?? `/articles/${a.slug}`,
+      })),
+    };
+  });
 }
 
 export default async function IssueDetailPage({ params }: PageProps) {
@@ -136,15 +159,16 @@ export default async function IssueDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [articles, drawing] = await Promise.all([
+  const [articles, drawings, credits] = await Promise.all([
     getArticlesByIssue(issue.id),
-    getIssueDrawingByIssueId(issue.id),
+    getIssueDrawingsByIssueId(issue.id),
+    getIssueCredits(issue.id),
   ]);
 
-  // Inject drawing as a pseudo-article card at the end of the list.
+  // Inject drawings as pseudo-article cards at the end of the list.
   const allArticles: Article[] = [...articles];
 
-  if (drawing) {
+  for (const drawing of drawings) {
     const drawingCardAuthor =
       drawing.authorName?.trim() ||
       drawing.authorHandle?.trim() ||
@@ -162,19 +186,21 @@ export default async function IssueDetailPage({ params }: PageProps) {
       viewCount: drawing.viewCount,
       echoCount: drawing.commentCount,
       issue,
-      customHref: `/issues/${issue.slug}/drawing`,
+      customHref: `/issues/${issue.slug}/drawing?from=article-drawing-${drawing.id}`,
     });
   }
 
   const groups = groupArticlesByCategory(allArticles);
-  const categoryRows = buildIssueCategoryRows(groups);
+  const isCurrentIssue = Boolean(issue.isCurrent);
+  const categoryRows = isCurrentIssue ? buildIssueCategoryRows(groups) : [];
+  const archiveSections = isCurrentIssue ? [] : buildArchiveSections(groups, issue.slug);
 
   return (
     <main className="min-h-screen bg-[#F7F5F0]">
       <Navbar />
 
-      <div className="mx-auto max-w-6xl px-4 pb-24 pt-32 md:px-8">
-        <header className="mb-16 border-b border-[#DDD6CE] pb-10">
+      <div className={`mx-auto px-4 pb-24 pt-32 md:px-8 ${isCurrentIssue ? 'max-w-6xl' : 'max-w-3xl'}`}>
+        <header className={`border-b border-[#DDD6CE] pb-10 ${isCurrentIssue ? 'mb-16' : 'mb-12'}`}>
           <div className="flex flex-wrap items-center gap-3">
             <span className="h-1.5 w-1.5 rounded-full bg-[#A1887F] opacity-60" />
             <p className="text-xs uppercase tracking-[0.35em] text-[#9E9E9E]">Issue</p>
@@ -217,11 +243,11 @@ export default async function IssueDetailPage({ params }: PageProps) {
           <div className="rounded-[2rem] border border-[#E8E4DF] bg-white/70 px-8 py-14 text-center text-[#8D8D8D]">
             这一期还没有已发布文章。
           </div>
-        ) : (
+        ) : isCurrentIssue ? (
           <div className="space-y-16">
             {categoryRows.map((row) => (
               <div
-                key={row.groups.map(([category]) => category).join("-")}
+                key={row.groups.map(([c]) => c).join("-")}
                 className={
                   row.groups.length === 2
                     ? "grid grid-cols-1 gap-16 md:grid-cols-2 md:gap-12"
@@ -238,7 +264,12 @@ export default async function IssueDetailPage({ params }: PageProps) {
               </div>
             ))}
           </div>
+        ) : (
+          <IssueArchiveTOC sections={archiveSections} />
         )}
+
+        {/* 制作团队 */}
+        <IssueCredits data={credits} />
       </div>
     </main>
   );

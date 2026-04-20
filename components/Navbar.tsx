@@ -337,9 +337,9 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
           role="dialog"
           aria-modal="true"
           aria-label="移动端导航菜单"
-          className="fixed right-0 top-20 h-[calc(100vh-5rem)] w-72 max-w-[85vw] border-l border-[#D7CCC8]/50 bg-[#F7F5F0] shadow-xl md:hidden"
+          className="fixed right-0 top-20 h-[calc(100dvh-5rem)] w-72 max-w-[85vw] border-l border-[#D7CCC8]/50 bg-[#F7F5F0] shadow-xl md:hidden"
         >
-          <div className="flex h-full flex-col overflow-y-auto p-6">
+          <div className="flex h-full flex-col overflow-y-auto overscroll-contain p-6 pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
             <form onSubmit={handleSearch} className="mb-6 relative">
               <input
                 type="text"
@@ -351,7 +351,7 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#9E9E9E]" />
             </form>
             
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-3">
               {primaryNavItems.map((item) =>
                 isNavGroup(item) ? (
                   <div key={item.name} className="rounded-3xl border border-[#E6DDD6] bg-white/55 px-4 py-3">
@@ -407,7 +407,7 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
               )}
             </div>
 
-            <div className="mt-8 flex flex-col gap-4 border-t border-[#D7CCC8]/50 pt-6">
+            <div className="mt-6 flex flex-col gap-3 border-t border-[#D7CCC8]/50 pt-4">
               {utilityItems.map((item) => {
                 const Icon = item.icon;
 

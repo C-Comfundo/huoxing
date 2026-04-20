@@ -7,10 +7,6 @@ interface SuccessModalContent {
   greeting: string;
   paragraphs: string[];
   exploreTitle: string;
-  officialSiteTitle: string;
-  officialSiteText: string;
-  officialSiteWeChat: string;
-  officialSiteHint: string;
   wechatTitle: string;
   wechatHint: string;
   signature: string;
@@ -174,19 +170,7 @@ export default function SuccessLetterModal({ isOpen, onClose, content }: Success
                 </p>
 
                 <div className="space-y-6 sm:space-y-8 text-sm sm:text-base leading-relaxed text-[#5A504A]">
-                  <div className="flex flex-col items-center justify-center text-center space-y-4">
-                    <p className="text-[#3A3A3A]">
-                      {content.officialSiteText}
-                    </p>
-                    <p className="text-[#8D6E63] font-medium text-lg tracking-wider select-all">
-                      {content.officialSiteWeChat}
-                    </p>
-                    <p className="text-xs sm:text-sm text-[#9A8F87]">
-                      {content.officialSiteHint}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col items-center justify-center text-center space-y-2 pt-6 sm:pt-8 border-t border-[#E8E4DF] border-dashed">
+                  <div className="flex flex-col items-center justify-center text-center space-y-2">
                     <p className="font-youyou text-[#3A3A3A]">
                       {content.wechatTitle}
                     </p>

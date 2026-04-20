@@ -162,7 +162,6 @@ function SectionCard({
                 </div>
               </>
             );
-
             return (
               <li
                 key={item.id}

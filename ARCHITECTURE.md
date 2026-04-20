@@ -5,7 +5,7 @@
 - **Frontend & Routing**: Next.js (App Router) + TypeScript
 - **Database & Auth**: Supabase (PostgreSQL + Auth + RLS)
 - **Email Service**: Resend
-- **Deployment**: Vercel
+- **Deployment**: Cloudflare Workers (via OpenNext)
 
 ---
 

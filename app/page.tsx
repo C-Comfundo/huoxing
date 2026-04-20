@@ -5,6 +5,7 @@ import { getCurrentIssue } from "@/lib/articles";
 import { getDebateTopicTiming, type DebateTopicStatus } from "@/lib/debate-schedule";
 import { getDebateTopicSummariesByIssueId } from "@/lib/debates";
 import { getIssueTOC } from "@/lib/issue-toc";
+import { getIssueCredits } from "@/lib/issue-credits";
 import { getPreferredPublicImagePath } from "@/lib/public-assets";
 import ScrollToAnchor from '@/components/ScrollToAnchor';
 
@@ -13,9 +14,17 @@ export const revalidate = 60;
 export default async function Home() {
   const currentIssue = await getCurrentIssue();
   const nowMs = Date.now();
-  const debateTopics = currentIssue
-    ? await getDebateTopicSummariesByIssueId(currentIssue.id)
-    : [];
+  let debateTopics = [] as Awaited<ReturnType<typeof getDebateTopicSummariesByIssueId>>;
+  let tocSections = [] as Awaited<ReturnType<typeof getIssueTOC>>;
+  let credits = null as Awaited<ReturnType<typeof getIssueCredits>>;
+
+  if (currentIssue) {
+    [debateTopics, tocSections, credits] = await Promise.all([
+      getDebateTopicSummariesByIssueId(currentIssue.id),
+      getIssueTOC(currentIssue.id),
+      getIssueCredits(currentIssue.id),
+    ]);
+  }
   const debateEntries =
     currentIssue && debateTopics.length > 0
       ? debateTopics
@@ -40,9 +49,6 @@ export default async function Home() {
             return priority[a.status] - priority[b.status];
           })
       : [];
-  const tocSections = currentIssue
-    ? await getIssueTOC(currentIssue.id)
-    : [];
   const heroCoverImage = getPreferredPublicImagePath(currentIssue?.coverImage) ?? "/poster.webp";
 
   return (
@@ -56,7 +62,7 @@ export default async function Home() {
         </div>
 
         <div className="relative z-10 flex min-h-screen flex-col rounded-t-[2.5rem] bg-white pb-0 pt-4 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.15)] md:rounded-t-[3rem] md:pt-8">
-          <Feed issue={currentIssue} debateEntries={debateEntries} tocSections={tocSections} />
+          <Feed issue={currentIssue} debateEntries={debateEntries} tocSections={tocSections} credits={credits} />
 
           <footer className="mt-2 border-t border-[#EFEBE9] bg-transparent py-6 text-center text-sm font-light tracking-widest text-[#9E9E9E] md:py-7">
             <p>
