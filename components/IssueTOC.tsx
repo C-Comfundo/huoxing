@@ -1,6 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Paperclip } from "lucide-react";
 import type { TOCSection } from "@/lib/issue-toc";
 import { getAuthorArticlesSearchHref } from "@/lib/author-search";
+import {
+  getClickedArticleHrefSet,
+  recordClickedArticleHref,
+} from "@/lib/article-click-history";
 import Link from "next/link";
 
 /* ── Visual presets cycled per card ─────────────────────── */
@@ -23,9 +30,13 @@ const NOISE_BG =
 function SectionCard({
   section,
   index,
+  clickedArticleHrefs,
+  onTrackArticleClick,
 }: {
   section: TOCSection;
   index: number;
+  clickedArticleHrefs: Set<string>;
+  onTrackArticleClick: (href: string) => void;
 }) {
   const style = CARD_STYLES[index % CARD_STYLES.length];
   const tapePos =
@@ -139,12 +150,22 @@ function SectionCard({
               : item.articleSlug
                 ? `/articles/${item.articleSlug}?articleId=${item.id}`
                 : null;
+            const isArticleHref = Boolean(item.articleSlug && itemHref);
+            const isClicked = isArticleHref && itemHref ? clickedArticleHrefs.has(itemHref) : false;
             const authorHref = getAuthorArticlesSearchHref(item.author);
 
             const titleClass =
-              "text-[1rem] leading-relaxed text-[#5C4D43] transition-colors duration-200 group-hover/item:text-[#241A14]";
+              `text-[1rem] leading-relaxed transition-colors duration-200 ${
+                isClicked
+                  ? "text-[#B8B8B8] hover:text-[#A5A5A5]"
+                  : "text-[#5C4D43] group-hover/item:text-[#241A14]"
+              }`;
             const titleClassMobile =
-              "text-[0.95rem] leading-relaxed text-[#5C4D43] transition-colors duration-200 group-hover/item:text-[#241A14] block";
+              `text-[0.95rem] leading-relaxed transition-colors duration-200 block ${
+                isClicked
+                  ? "text-[#B8B8B8] hover:text-[#A5A5A5]"
+                  : "text-[#5C4D43] group-hover/item:text-[#241A14]"
+              }`;
 
             return (
               <li
@@ -155,7 +176,15 @@ function SectionCard({
                 {/* Desktop: title → article, author → search */}
                 <div className="hidden md:flex items-end justify-between gap-3">
                   {itemHref ? (
-                    <Link href={itemHref} className={titleClass}>
+                    <Link
+                      href={itemHref}
+                      className={titleClass}
+                      onClick={() => {
+                        if (isArticleHref) {
+                          onTrackArticleClick(itemHref);
+                        }
+                      }}
+                    >
                       {item.title}
                     </Link>
                   ) : (
@@ -178,7 +207,15 @@ function SectionCard({
                 {/* Mobile */}
                 <div className="md:hidden">
                   {itemHref ? (
-                    <Link href={itemHref} className={titleClassMobile}>
+                    <Link
+                      href={itemHref}
+                      className={titleClassMobile}
+                      onClick={() => {
+                        if (isArticleHref) {
+                          onTrackArticleClick(itemHref);
+                        }
+                      }}
+                    >
                       {item.title}
                     </Link>
                   ) : (
@@ -212,6 +249,16 @@ interface IssueTOCProps {
 }
 
 export default function IssueTOC({ sections, issueLabel }: IssueTOCProps) {
+  const [clickedArticleHrefs, setClickedArticleHrefs] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setClickedArticleHrefs(getClickedArticleHrefSet());
+  }, []);
+
+  const handleTrackArticleClick = (href: string) => {
+    setClickedArticleHrefs(recordClickedArticleHref(href));
+  };
+
   if (sections.length === 0) {
     return null;
   }
@@ -275,7 +322,13 @@ export default function IssueTOC({ sections, issueLabel }: IssueTOCProps) {
         {/* Section Cards */}
         <div className="grid gap-6 md:grid-cols-2 mt-8">
           {sections.map((section, i) => (
-            <SectionCard key={section.id} section={section} index={i} />
+            <SectionCard
+              key={section.id}
+              section={section}
+              index={i}
+              clickedArticleHrefs={clickedArticleHrefs}
+              onTrackArticleClick={handleTrackArticleClick}
+            />
           ))}
         </div>
       </div>

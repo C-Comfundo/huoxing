@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChevronDown, ChevronRight, ArrowRight, BookOpen, MessageCircle } from 'lucide-react'
 import { getAuthorArticlesSearchHref } from '@/lib/author-search'
+import { getClickedArticleHrefSet, recordClickedArticleHref } from '@/lib/article-click-history'
 
 interface ArchiveArticle {
   id: string
@@ -32,6 +33,15 @@ export type { ArchiveArticle, ArchiveSection }
 
 export default function IssueArchiveTOC({ sections }: IssueArchiveTOCProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [clickedArticleHrefs, setClickedArticleHrefs] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    setClickedArticleHrefs(getClickedArticleHrefSet())
+  }, [])
+
+  const trackArticleClick = (href: string) => {
+    setClickedArticleHrefs(recordClickedArticleHref(href))
+  }
 
   const toggleSection = (category: string) => {
     setExpandedSections((prev) => {
@@ -136,6 +146,7 @@ export default function IssueArchiveTOC({ sections }: IssueArchiveTOCProps) {
               <div className="border-t border-[#E8E4DF]/60">
                 {section.articles.map((article, idx) => {
                   const authorHref = getAuthorArticlesSearchHref(article.author)
+                  const isClicked = clickedArticleHrefs.has(article.href)
                   return (
                     <div
                       key={article.id}
@@ -147,8 +158,18 @@ export default function IssueArchiveTOC({ sections }: IssueArchiveTOCProps) {
                         {idx + 1}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <Link href={article.href} className="block">
-                          <p className="text-sm text-[#3A3A3A] group-hover:text-[#A1887F] transition-colors truncate">
+                        <Link
+                          href={article.href}
+                          className="block"
+                          onClick={() => trackArticleClick(article.href)}
+                        >
+                          <p
+                            className={`text-sm transition-colors truncate ${
+                              isClicked
+                                ? 'text-[#B8B8B8] hover:text-[#A5A5A5]'
+                                : 'text-[#3A3A3A] group-hover:text-[#A1887F]'
+                            }`}
+                          >
                             {article.title}
                           </p>
                         </Link>
