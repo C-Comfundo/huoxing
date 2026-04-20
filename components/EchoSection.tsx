@@ -5,11 +5,13 @@ import { useState, useTransition } from "react";
 import { Heart, MessageSquare, Send } from "lucide-react";
 
 import { submitEcho, type Echo } from "@/app/actions/echoes";
+import { deleteEcho } from "@/app/actions/echo-delete";
 
 import { toggleEchoLike } from "@/app/actions/likes";
 
 interface EchoSectionProps {
   articleId: string;
+  currentUserId: string | null;
   isLoggedIn: boolean;
   initialEchoes: Echo[];
   initialLikeStatuses: Record<string, { count: number; liked: boolean }>;
@@ -29,6 +31,7 @@ function formatDate(input: string): string {
 
 export default function EchoSection({
   articleId,
+  currentUserId,
   isLoggedIn,
   initialEchoes,
   initialLikeStatuses,
@@ -85,6 +88,34 @@ export default function EchoSection({
     });
   };
 
+  const handleDelete = (echoId: string) => {
+    if (!currentUserId) {
+      setMessage("请先登录后再删除。");
+      return;
+    }
+
+    if (!window.confirm("确定删除这条回响吗？")) {
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await deleteEcho({ echoId });
+
+      if (!result.success) {
+        setMessage(result.message);
+        return;
+      }
+
+      setEchoes((prev) => prev.filter((item) => item.id !== echoId));
+      setLikeStatuses((prev) => {
+        const next = { ...prev };
+        delete next[echoId];
+        return next;
+      });
+      setMessage(result.message);
+    });
+  };
+
   return (
     <section className="mt-20 border-t border-[#D7CCC8]/40 pt-12">
       <div className="mb-8 flex items-center gap-3">
@@ -110,9 +141,21 @@ export default function EchoSection({
                 <span className="text-[13px] font-medium text-[#5D5D5D]">
                   {echo.authorLabel}
                 </span>
-                <span className="shrink-0 text-[11px] text-[#B0B0B0]">
-                  {formatDate(echo.createdAt)}
-                </span>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="text-[11px] text-[#B0B0B0]">
+                    {formatDate(echo.createdAt)}
+                  </span>
+                  {currentUserId === echo.userId ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(echo.id)}
+                      disabled={isPending}
+                      className="text-[11px] text-[#C4BCB6] transition-colors hover:text-[#9A8D84] disabled:opacity-50"
+                    >
+                      删除
+                    </button>
+                  ) : null}
+                </div>
               </div>
               <p className="mt-1.5 whitespace-pre-wrap font-serif text-[15px] leading-7 text-[#3A3A3A]">
                 {echo.content}
