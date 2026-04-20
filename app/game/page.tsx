@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
-type GameTheme = "violet" | "matrix";
+type GameTheme = "violet" | "matrix" | "ember";
 
 type GameEntry = {
   title: string;
@@ -34,6 +34,20 @@ type ThemeStyle = {
 
 const gameEntries: readonly GameEntry[] = [
   {
+    title: "向内扎根，星火重燃",
+    eyebrow: "下潜觉醒互动游戏",
+    description:
+      "点击屏幕，开始觉醒之旅。前 10 层是教学区；每颗星星都会回血，并随机触发一条女性主义格言。",
+    href: "https://woman100.aifnd.top/",
+    stats: [
+      { value: "10", label: "教学层" },
+      { value: "回血", label: "星星效果" },
+      { value: "图鉴", label: "格言收集" },
+    ],
+    cta: "开始觉醒之旅",
+    theme: "ember",
+  },
+  {
     title: "找到蕴藏在你身体里的女性力量",
     eyebrow: "女性力量人格图鉴",
     description:
@@ -64,6 +78,21 @@ const gameEntries: readonly GameEntry[] = [
 ];
 
 const themeStyles: Record<GameTheme, ThemeStyle> = {
+  ember: {
+    articleClassName:
+      "rounded-[2rem] border border-[#EBC6A5] bg-[linear-gradient(180deg,rgba(255,251,245,0.98),rgba(255,241,227,0.94))] shadow-[0_20px_60px_rgba(194,110,52,0.16)] hover:shadow-[0_26px_72px_rgba(194,110,52,0.22)]",
+    eyebrowClassName: "text-xs tracking-[0.18em] text-[#A96C44]",
+    titleClassName: "mt-4 font-youyou text-3xl leading-[1.18] text-[#9E4F22]",
+    iconClassName:
+      "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E7B58E] bg-white/75 text-[#B45A29] transition-transform duration-300 group-hover:-translate-y-1",
+    descriptionClassName: "line-clamp-4 font-serif text-base leading-8 text-[#6D5344]",
+    statsClassName: "grid grid-cols-3 gap-3 border-y border-[#EBCFB5] py-4",
+    statClassName: "text-center",
+    statValueClassName: "font-youyou text-3xl text-[#B45A29]",
+    statLabelClassName: "mt-1 text-sm tracking-[0.12em] text-[#9A7258]",
+    buttonClassName:
+      "inline-flex items-center justify-center rounded-full bg-[#B45A29] px-6 py-3 font-youyou text-base tracking-[0.14em] text-white transition-colors duration-300 group-hover:bg-[#99471B]",
+  },
   violet: {
     articleClassName:
       "rounded-[2rem] border border-[#E9E2F4] bg-[linear-gradient(180deg,rgba(249,246,255,0.98),rgba(243,238,251,0.92))] shadow-[0_20px_60px_rgba(171,150,208,0.16)] hover:shadow-[0_26px_70px_rgba(171,150,208,0.22)]",
