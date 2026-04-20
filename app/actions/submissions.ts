@@ -20,6 +20,7 @@ interface SubmissionPayload {
   category: string
   contactEmail: string
   description: string
+  originalFilename: string
   title: string
 }
 
@@ -52,12 +53,32 @@ function escapeHtml(value: string) {
     .replaceAll("'", '&#39;')
 }
 
+// Normalize attachment names to reduce mojibake and client-side security heuristics.
+function normalizeAttachmentFilename(filename: string) {
+  const extension = getFileExtension(filename)
+  const baseName = extension
+    ? filename.slice(0, -(extension.length + 1))
+    : filename
+
+  const normalizedBaseName = baseName
+    .normalize('NFKD')
+    .replace(/[^\x20-\x7E]+/g, '-')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-._]+|[-._]+$/g, '')
+
+  const safeBaseName = normalizedBaseName || 'manuscript'
+
+  return extension ? `${safeBaseName}.${extension}` : safeBaseName
+}
+
 function buildSubmissionHtml(data: SubmissionPayload) {
   const author = escapeHtml(data.author)
   const title = escapeHtml(data.title)
   const category = escapeHtml(data.category)
   const contactEmail = escapeHtml(data.contactEmail)
   const description = escapeHtml(data.description)
+  const originalFilename = escapeHtml(data.originalFilename)
 
   return `
     <div style="font-family: Georgia, 'Times New Roman', serif; color: #2c2c2c; line-height: 1.7;">
@@ -66,11 +87,12 @@ function buildSubmissionHtml(data: SubmissionPayload) {
       <p><strong>标题：</strong>${title}</p>
       <p><strong>栏目：</strong>${category}</p>
       <p><strong>联系邮箱：</strong>${contactEmail}</p>
+      <p><strong>原始文件名：</strong>${originalFilename}</p>
       <div style="margin-top: 24px;">
         <strong>简短描述：</strong>
         <p style="margin-top: 8px; white-space: pre-wrap;">${description}</p>
       </div>
-      <p style="margin-top: 24px; color: #7d7d7d;">附件中包含作者上传的原稿文件。</p>
+      <p style="margin-top: 24px; color: #7d7d7d;">附件中包含作者上传的稿件文件。</p>
     </div>
   `
 }
@@ -83,6 +105,7 @@ function buildSubmissionText(data: SubmissionPayload) {
     `标题：${data.title}`,
     `栏目：${data.category}`,
     `联系邮箱：${data.contactEmail}`,
+    `原始文件名：${data.originalFilename}`,
     '',
     '简短描述：',
     data.description,
@@ -144,6 +167,7 @@ export async function submitManuscript(
     }
 
     const resend = getResendClient()
+    const editorialRecipients = getEditorialRecipientList()
     const attachment = Buffer.from(await file.arrayBuffer()).toString('base64')
     const payload: SubmissionPayload = {
       author,
@@ -151,18 +175,19 @@ export async function submitManuscript(
       category,
       description,
       contactEmail,
+      originalFilename: file.name,
     }
 
-    const { error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: getResendFromEmail(),
-      to: getEditorialRecipientList(),
+      to: editorialRecipients,
       replyTo: contactEmail,
       subject: `新投稿｜${category}｜${title}`,
       text: buildSubmissionText(payload),
       html: buildSubmissionHtml(payload),
       attachments: [
         {
-          filename: file.name,
+          filename: normalizeAttachmentFilename(file.name),
           content: attachment,
         },
       ],
@@ -176,6 +201,11 @@ export async function submitManuscript(
       }
     }
 
+    console.info('[submitManuscript] Email accepted by Resend:', {
+      emailId: data?.id ?? null,
+      recipientCount: editorialRecipients.length,
+    })
+
     return {
       success: true,
       message: '投稿已发送到编辑部邮箱。',
@@ -184,7 +214,7 @@ export async function submitManuscript(
     console.error('[submitManuscript] Unexpected error:', error)
     return {
       success: false,
-      message: '投稿发送失败，请检查邮件配置。',
+      message: '投稿发送失败，请检查邮件格式。',
     }
   }
 }
