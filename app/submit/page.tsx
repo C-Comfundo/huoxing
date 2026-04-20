@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, PenSquare } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import SubmissionForm from "@/components/submit/submission-form";
+import { getEditorialRecipientList } from "@/lib/resend";
 
 export const metadata: Metadata = {
   title: "在线投稿 | 星火",
@@ -13,6 +14,8 @@ export const metadata: Metadata = {
 };
 
 export default function SubmitPage() {
+  const submissionRecipients = getEditorialRecipientList();
+
   return (
     <main className="min-h-screen bg-[#F7F5F0]">
       <Navbar />
@@ -43,7 +46,10 @@ export default function SubmitPage() {
             </div>
           </div>
 
-          <SubmissionForm />
+          <SubmissionForm
+            submissionEmailHref={submissionRecipients.join(",")}
+            submissionEmailLabel={submissionRecipients.join(", ")}
+          />
         </div>
       </div>
     </main>
