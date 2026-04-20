@@ -58,7 +58,7 @@ export default function CategoryStoriesPage({
                 href="/issues"
                 className="inline-flex items-center rounded-full border border-[#D7CCC8] px-5 py-2 text-sm text-[#7C746D] transition-colors hover:border-[#A1887F] hover:text-[#A1887F]"
               >
-                往期归档
+                阅读往期
               </Link>
             </div>
           </div>

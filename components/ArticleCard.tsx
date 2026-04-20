@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, MessageCircle } from "lucide-react";
 import type { Article } from "@/lib/articles";
+import { getAuthorArticlesSearchHref } from "@/lib/author-search";
 import { getIssuePageCategoryHeading } from "@/lib/articles";
 import IssueBadge from "@/components/IssueBadge";
 
@@ -33,6 +34,8 @@ export default function ArticleCard({
   const categoryLabel = extendedCategoryLabel
     ? getIssuePageCategoryHeading(article.category)
     : article.category;
+
+  const authorArticlesHref = getAuthorArticlesSearchHref(article.author);
 
   return (
     <article className="group relative flex flex-col gap-8 rounded-3xl p-6 md:p-8 -mx-6 md:-mx-8 transition-all duration-700 hover:bg-[#FDFCF9] hover:shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:-translate-y-2 ring-1 ring-transparent hover:ring-[#E3D8D0]/40">
@@ -70,9 +73,19 @@ export default function ArticleCard({
         </Link>
       </div>
 
-      <div className="flex items-center justify-between pt-4 mt-auto">
+      <div className="relative z-10 flex items-center justify-between pt-4 mt-auto">
         <span className="text-sm font-serif italic text-[#8A7A73] tracking-[0.1em]">
-          作者：<span className="font-medium text-[#5A504A]">{article.author}</span>
+          作者：
+          {authorArticlesHref ? (
+            <Link
+              href={authorArticlesHref}
+              className="font-medium text-[#5A504A] transition-colors hover:text-[#A1887F] hover:underline underline-offset-4"
+            >
+              {article.author}
+            </Link>
+          ) : (
+            <span className="font-medium text-[#5A504A]">{article.author}</span>
+          )}
         </span>
 
         {showReadMore ? (
