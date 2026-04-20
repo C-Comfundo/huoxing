@@ -17,12 +17,14 @@ interface PageProps {
   };
   searchParams?: {
     topic?: string | string[];
+    from?: string;
   };
 }
 
 export default async function IssueDebatePage({ params, searchParams }: PageProps) {
   const slug = decodeURIComponent(params.slug);
   const issue = await getIssueBySlug(slug);
+  const from = searchParams?.from as string;
 
   if (!issue) {
     notFound();
@@ -57,7 +59,7 @@ export default async function IssueDebatePage({ params, searchParams }: PageProp
 
   return (
     <main className="min-h-screen bg-[#F7F5F0]">
-      <Navbar />
+      <Navbar articleId={from} />
 
       <div className="mx-auto max-w-6xl px-4 pb-24 pt-24 md:px-8 md:pt-32">
         <Link
