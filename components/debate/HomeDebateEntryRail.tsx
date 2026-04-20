@@ -70,6 +70,7 @@ export default function HomeDebateEntryRail({
         return (
           <div
             key={entry.href}
+            id={`debate-${index + 1}`}
             className={`w-full transition-[flex,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] xl:min-w-0 ${widthClass}`}
             onMouseEnter={() => handleActivate(index)}
             onFocus={() => handleActivate(index)}

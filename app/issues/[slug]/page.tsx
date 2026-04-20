@@ -186,7 +186,7 @@ export default async function IssueDetailPage({ params }: PageProps) {
       viewCount: drawing.viewCount,
       echoCount: drawing.commentCount,
       issue,
-      customHref: `/issues/${issue.slug}/drawing`,
+      customHref: `/issues/${issue.slug}/drawing?from=article-drawing-${drawing.id}`,
     });
   }
 

@@ -31,10 +31,14 @@ function SectionCard({
     index % 2 === 0
       ? "-top-3 left-10 -rotate-3"
       : "-top-3 right-10 rotate-3";
+  
+  // 检查是否为辩题相关的section
+  const isDebateSection = section.displayName.includes("辩题") || section.displayName.includes("以辩会友");
 
   if (section.isStandalone) {
     const cardContent = (
       <div
+        id={isDebateSection ? "debate-end" : undefined} // 添加id
         className={`relative rounded-sm p-6 shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-transform duration-300 hover:-translate-y-1 sm:col-span-2 max-w-lg mx-auto w-full flex justify-center items-center ${style.color} ${style.rotation}`}
       >
         {/* Washi Tape */}
@@ -66,6 +70,7 @@ function SectionCard({
         <Link href={section.customHref} className="block sm:col-span-2 max-w-lg mx-auto w-full">
           {/* We replace the card's external positioning classes with the wrapper ones, but keep inner styles */}
           <div
+            id={isDebateSection ? "debate-end" : undefined} // 添加id
             className={`relative rounded-sm p-6 shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-transform duration-300 hover:-translate-y-1 w-full flex justify-center items-center ${style.color} ${style.rotation}`}
           >
             {/* Washi Tape */}
@@ -99,6 +104,7 @@ function SectionCard({
 
   return (
     <div
+      id={isDebateSection ? "debate-end" : undefined} // 添加id
       className={`relative rounded-sm p-5 sm:p-6 shadow-[0_4px_12px_rgba(0,0,0,0.05),_0_1px_3px_rgba(0,0,0,0.02)] transition-transform duration-300 hover:-translate-y-1 ${style.color} ${style.rotation}`}
     >
       {/* Paper texture */}

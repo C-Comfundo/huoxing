@@ -28,8 +28,8 @@ export default async function Home() {
   const debateEntries =
     currentIssue && debateTopics.length > 0
       ? debateTopics
-          .map((topic) => ({
-            href: `/issues/${currentIssue.slug}/debate?topic=${topic.id}`,
+          .map((topic, index) => ({
+            href: `/issues/${currentIssue.slug}/debate?topic=${topic.id}&from=debate-${index + 1}`,
             issueLabel: currentIssue.label,
             title: topic.title,
             description: topic.description,
