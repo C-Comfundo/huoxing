@@ -121,7 +121,7 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
     if (isDrawingSection(displayName)) {
       customHref = issueSlug ? `/issues/${issueSlug}/drawing` : "/drawing";
     } else if (displayName.includes("辩题") || displayName.includes("以辩会友")) {
-      customHref = issueSlug ? `/issues/${issueSlug}/debate?from=debate-end` : "/debate-end";
+      customHref = issueSlug ? `/issues/${issueSlug}/debate?from=debate-end` : "/debate";
     }
 
     const item: TOCItem = {
@@ -147,7 +147,7 @@ export async function getIssueTOC(issueId: string): Promise<TOCSection[]> {
     if (isDrawingSection(displayName)) {
       customHref = issueSlug ? `/issues/${issueSlug}/drawing` : "/drawing";
     } else if (displayName.includes("辩题") || displayName.includes("以辩会友")) {
-      customHref = issueSlug ? `/issues/${issueSlug}/debate?from=debate-end` : "/debate-end";
+      customHref = issueSlug ? `/issues/${issueSlug}/debate?from=debate-end` : "/debate";
     }
 
     return {
