@@ -27,7 +27,13 @@ function getReturnAnchor(from: string | string[] | undefined) {
 
 export default async function IssueDrawingPage({ params, searchParams }: PageProps) {
   const slug = decodeURIComponent(params.slug);
-  const issue = await getIssueBySlug(slug);
+  const supabase = createClient();
+  const [
+    issue,
+    {
+      data: { user },
+    },
+  ] = await Promise.all([getIssueBySlug(slug), supabase.auth.getUser()]);
 
   if (!issue) {
     notFound();
@@ -39,16 +45,7 @@ export default async function IssueDrawingPage({ params, searchParams }: PagePro
     notFound();
   }
 
-  const supabase = createClient();
-  const [
-    {
-      data: { user },
-    },
-    ...allComments
-  ] = await Promise.all([
-    supabase.auth.getUser(),
-    ...drawings.map((d) => fetchDrawingComments(d.id)),
-  ]);
+  const allComments = await Promise.all(drawings.map((drawing) => fetchDrawingComments(drawing.id)));
   const returnAnchor = getReturnAnchor(searchParams?.from);
   const returnHref = returnAnchor
     ? `/issues/${issue.slug}#${returnAnchor}`
