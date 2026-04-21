@@ -32,7 +32,7 @@ export default function Hero({ coverImage }: HeroProps) {
             <p className="font-youyou text-lg sm:text-xl md:text-2xl text-[#757575] tracking-[0.25em] leading-relaxed">
               每个人都是一个叙事体
             </p>
-            <p className="font-sans text-[10px] sm:text-xs md:text-sm text-[#9E9E9E] mt-3 md:mt-4 tracking-widest font-light uppercase">
+            <p className="font-youyou text-lg sm:text-xl md:text-2xl text-[#9E9E9E] mt-3 md:mt-4 tracking-[0.25em] leading-relaxed">
               万物可叙，人人皆星
             </p>
           </div>
