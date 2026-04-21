@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Archive, ChevronDown, ChevronRight, Menu, PenLine, PenSquare, Search, X } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -65,7 +66,9 @@ function isNavGroup(item: PrimaryNavItem): item is NavGroupItem {
 }
 
 export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
+  const router = useRouter();
   const navRef = useRef<HTMLElement>(null);
+  const prefetchedRoutesRef = useRef<Set<string>>(new Set());
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openDesktopMenu, setOpenDesktopMenu] = useState<string | null>(null);
   const [openMobileGroup, setOpenMobileGroup] = useState<string | null>(null);
@@ -165,10 +168,31 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
     setOpenMobileGroup(null);
   };
 
+  const prefetchHref = (href: string) => {
+    if (prefetchedRoutesRef.current.has(href)) {
+      return;
+    }
+
+    prefetchedRoutesRef.current.add(href);
+    void router.prefetch(href);
+  };
+
+  const prefetchNavItem = (item: PrimaryNavItem | NavLinkItem) => {
+    if ("items" in item) {
+      item.items.forEach((entry) => prefetchHref(entry.href));
+      return;
+    }
+
+    prefetchHref(item.href);
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
+      const nextHref = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
+      setOpenDesktopMenu(null);
+      closeMobileMenu();
+      router.push(nextHref);
     }
   };
 
@@ -197,9 +221,12 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
                   className="group inline-flex items-center gap-1.5 font-youyou text-base tracking-wide text-[#5D5D5D] transition-colors duration-300 hover:text-[#3A3A3A] lg:text-lg"
                   aria-expanded={openDesktopMenu === item.name}
                   aria-haspopup="menu"
-                  onClick={() =>
-                    setOpenDesktopMenu((current) => (current === item.name ? null : item.name))
-                  }
+                  onMouseEnter={() => prefetchNavItem(item)}
+                  onFocus={() => prefetchNavItem(item)}
+                  onClick={() => {
+                    prefetchNavItem(item);
+                    setOpenDesktopMenu((current) => (current === item.name ? null : item.name));
+                  }}
                 >
                   <span className="relative">
                     {item.name}
@@ -251,6 +278,8 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
               <Link
                 key={item.name}
                 href={item.href}
+                onMouseEnter={() => prefetchNavItem(item)}
+                onFocus={() => prefetchNavItem(item)}
                 className="group relative font-youyou text-base tracking-wide text-[#5D5D5D] transition-colors duration-300 hover:text-[#3A3A3A] lg:text-lg"
               >
                 {item.name}
@@ -279,6 +308,8 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
               <Link
                 key={item.name}
                 href={item.href}
+                onMouseEnter={() => prefetchHref(item.href)}
+                onFocus={() => prefetchHref(item.href)}
                 className="group flex items-center space-x-2 text-[#5D5D5D] transition-colors duration-300 hover:text-[#A1887F]"
               >
                 <Icon className="h-3.5 w-3.5 md:h-4 md:w-4" strokeWidth={1.5} />
@@ -359,9 +390,10 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
                       type="button"
                       className="flex w-full items-center justify-between font-youyou text-lg tracking-wide text-[#5D5D5D]"
                       aria-expanded={openMobileGroup === item.name}
-                      onClick={() =>
-                        setOpenMobileGroup((current) => (current === item.name ? null : item.name))
-                      }
+                      onClick={() => {
+                        prefetchNavItem(item);
+                        setOpenMobileGroup((current) => (current === item.name ? null : item.name));
+                      }}
                     >
                       <span>{item.name}</span>
                       <ChevronRight
@@ -398,6 +430,8 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
                   <Link
                     key={item.name}
                     href={item.href}
+                    onMouseEnter={() => prefetchNavItem(item)}
+                    onFocus={() => prefetchNavItem(item)}
                     onClick={closeMobileMenu}
                     className="font-youyou text-lg tracking-wide text-[#5D5D5D] transition-colors hover:text-[#3A3A3A]"
                   >
@@ -415,6 +449,8 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
                   <Link
                     key={item.name}
                     href={item.href}
+                    onMouseEnter={() => prefetchHref(item.href)}
+                    onFocus={() => prefetchHref(item.href)}
                     onClick={closeMobileMenu}
                     className="group inline-flex items-center space-x-2 text-[#5D5D5D] transition-colors duration-300 hover:text-[#A1887F]"
                   >
@@ -455,7 +491,8 @@ export default function Navbar({ articleId }: NavbarProps) { // 接收 articleId
                       const { signOut } = await import("@/app/actions/auth");
                       await signOut();
                       closeMobileMenu();
-                      window.location.href = "/";
+                      router.push("/");
+                      router.refresh();
                     }}
                     className="text-left text-sm font-youyou text-[#5D5D5D] transition-colors hover:text-red-500"
                   >

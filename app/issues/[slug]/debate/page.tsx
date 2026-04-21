@@ -23,17 +23,18 @@ interface PageProps {
 
 export default async function IssueDebatePage({ params, searchParams }: PageProps) {
   const slug = decodeURIComponent(params.slug);
-  const issue = await getIssueBySlug(slug);
+  const supabase = createClient();
+  const [
+    issue,
+    {
+      data: { user },
+    },
+  ] = await Promise.all([getIssueBySlug(slug), supabase.auth.getUser()]);
   const from = searchParams?.from as string;
 
   if (!issue) {
     notFound();
   }
-
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const topics = (await getDebateTopicsByIssueId(issue.id, user?.id ?? null)).sort((a, b) => {
     const nowMs = Date.now();
     const aStatus =

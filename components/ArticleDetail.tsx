@@ -60,16 +60,17 @@ export default async function ArticleDetail({
   fallbackCategory = "未分类",
   articleId, // 接收 articleId
 }: ArticleDetailProps) {
-  const article = await getArticleBySlug(slug);
+  const supabase = createClient();
+  const [
+    article,
+    {
+      data: { user },
+    },
+  ] = await Promise.all([getArticleBySlug(slug), supabase.auth.getUser()]);
 
   if (!article) {
     notFound();
   }
-
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const echoes = await fetchEchoes(article.id);
 
