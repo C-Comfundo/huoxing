@@ -159,10 +159,11 @@ export default async function IssueDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const isCurrentIssue = Boolean(issue.isCurrent);
   const [articles, drawings, credits] = await Promise.all([
     getArticlesByIssue(issue.id),
     getIssueDrawingsByIssueId(issue.id),
-    getIssueCredits(issue.id),
+    isCurrentIssue ? getIssueCredits(issue.id) : Promise.resolve(null),
   ]);
 
   // Inject drawings as pseudo-article cards at the end of the list.
@@ -191,7 +192,6 @@ export default async function IssueDetailPage({ params }: PageProps) {
   }
 
   const groups = groupArticlesByCategory(allArticles);
-  const isCurrentIssue = Boolean(issue.isCurrent);
   const categoryRows = isCurrentIssue ? buildIssueCategoryRows(groups) : [];
   const archiveSections = isCurrentIssue ? [] : buildArchiveSections(groups, issue.slug);
 
@@ -269,7 +269,7 @@ export default async function IssueDetailPage({ params }: PageProps) {
         )}
 
         {/* 制作团队 */}
-        <IssueCredits data={credits} />
+        {isCurrentIssue ? <IssueCredits data={credits} /> : null}
       </div>
     </main>
   );
