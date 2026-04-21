@@ -30,10 +30,10 @@ export default function Hero({ coverImage }: HeroProps) {
           
           <div className="mt-8 lg:mt-16 border-l-[3px] border-[#D7CCC8]/80 pl-6 opacity-0 animate-fade-in-up delay-[400ms]">
             <p className="font-youyou text-lg sm:text-xl md:text-2xl text-[#757575] tracking-[0.25em] leading-relaxed">
-              星星之火，可以燎原
+              每个人都是一个叙事体
             </p>
             <p className="font-sans text-[10px] sm:text-xs md:text-sm text-[#9E9E9E] mt-3 md:mt-4 tracking-widest font-light uppercase">
-              Spark | Women&apos;s Writing Community
+              万物可叙，人人皆星
             </p>
           </div>
         </div>
