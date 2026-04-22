@@ -154,6 +154,7 @@ export default async function ArticleDetail({
         <EchoSection
           articleId={article.id}
           isLoggedIn={Boolean(user)}
+          currentUserId={userId ?? undefined}
           initialEchoes={echoes}
           initialLikeStatuses={likeStatuses}
         />
