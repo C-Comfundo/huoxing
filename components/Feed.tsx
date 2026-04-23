@@ -51,7 +51,7 @@ export default function Feed({ issue = null, debateEntries = [], tocSections = [
                   href={`/issues/${issue.slug}`}
                   className="inline-flex items-center rounded-full border border-[#D7CCC8] px-6 py-2.5 transition-all duration-300 hover:-translate-y-[2px] hover:border-[#A1887F] hover:bg-[#A1887F] hover:text-white hover:shadow-[0_8px_20px_rgba(161,136,127,0.3)]"
                 >
-                  {"\u67e5\u770b\u672c\u671f"}
+                  {"\u9605\u8bfb\u672c\u671f"}
                 </Link>
               ) : null}
 
@@ -59,7 +59,7 @@ export default function Feed({ issue = null, debateEntries = [], tocSections = [
                 href="/issues"
                 className="inline-flex items-center rounded-full border border-[#D7CCC8] px-6 py-2.5 transition-all duration-300 hover:-translate-y-[2px] hover:border-[#A1887F] hover:bg-[#A1887F] hover:text-white hover:shadow-[0_8px_20px_rgba(161,136,127,0.3)]"
               >
-                {"\u5f80\u671f\u5f52\u6863"}
+                {"\u9605\u8bfb\u5f80\u671f"}
               </Link>
             </div>
           </div>

@@ -48,7 +48,7 @@ function getSectionCustomHref(displayName: string, issueSlug?: string) {
   }
 
   if (displayName.includes("辩题") || displayName.includes("以辩会友")) {
-    return issueSlug ? `/issues/${issueSlug}/debate` : "/debate";
+    return issueSlug ? `/issues/${issueSlug}/debate?from=debate-end` : "/debate";
   }
 
   return undefined;

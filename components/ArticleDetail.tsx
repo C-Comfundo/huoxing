@@ -20,6 +20,7 @@ import { getFavoriteStatus } from "@/app/actions/favorites";
 
 import { getEchoLikeStatuses } from "@/app/actions/likes";
 
+import { getAuthorArticlesSearchHref } from "@/lib/author-search";
 import { getArticleBySlug, getIssueHref } from "@/lib/articles";
 
 import { createClient } from "@/lib/supabase/server";
@@ -59,16 +60,17 @@ export default async function ArticleDetail({
   fallbackCategory = "未分类",
   articleId, // 接收 articleId
 }: ArticleDetailProps) {
-  const article = await getArticleBySlug(slug);
+  const supabase = createClient();
+  const [
+    article,
+    {
+      data: { user },
+    },
+  ] = await Promise.all([getArticleBySlug(slug), supabase.auth.getUser()]);
 
   if (!article) {
     notFound();
   }
-
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const echoes = await fetchEchoes(article.id);
 
@@ -84,6 +86,8 @@ export default async function ArticleDetail({
   const shouldUseHtml = hasHtmlTags(article.content);
   const resolvedBackHref = backHref ?? `${getIssueHref(article.issue)}#article-${article.slug}`;
   const resolvedBackLabel = backLabel ?? (article.issue ? "返回本期" : "返回列表");
+
+  const authorArticlesHref = getAuthorArticlesSearchHref(article.author);
 
   return (
     <main className="min-h-screen bg-[#F7F5F0]">
@@ -113,7 +117,19 @@ export default async function ArticleDetail({
           </h1>
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-4 text-sm font-serif italic text-[#9E9E9E]">
-            <span>作者：{article.author}</span>
+            <span className="inline-flex items-center gap-1">
+              <span>作者：</span>
+              {authorArticlesHref ? (
+                <Link
+                  href={authorArticlesHref}
+                  className="italic text-[#9E9E9E] transition-colors hover:text-[#A1887F] hover:underline underline-offset-4"
+                >
+                  {article.author}
+                </Link>
+              ) : (
+                <span>{article.author}</span>
+              )}
+            </span>
             <span className="h-1 w-1 rounded-full bg-[#D7CCC8]" />
             <span>{formatDate(article.publishedAt)}</span>
             <span className="h-1 w-1 rounded-full bg-[#D7CCC8]" />
@@ -153,8 +169,8 @@ export default async function ArticleDetail({
 
         <EchoSection
           articleId={article.id}
+          currentUserId={userId}
           isLoggedIn={Boolean(user)}
-          currentUserId={userId ?? undefined}
           initialEchoes={echoes}
           initialLikeStatuses={likeStatuses}
         />

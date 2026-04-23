@@ -17,21 +17,24 @@ interface PageProps {
   };
   searchParams?: {
     topic?: string | string[];
+    from?: string;
   };
 }
 
 export default async function IssueDebatePage({ params, searchParams }: PageProps) {
   const slug = decodeURIComponent(params.slug);
-  const issue = await getIssueBySlug(slug);
+  const supabase = createClient();
+  const [
+    issue,
+    {
+      data: { user },
+    },
+  ] = await Promise.all([getIssueBySlug(slug), supabase.auth.getUser()]);
+  const from = searchParams?.from as string;
 
   if (!issue) {
     notFound();
   }
-
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const topics = (await getDebateTopicsByIssueId(issue.id, user?.id ?? null)).sort((a, b) => {
     const nowMs = Date.now();
     const aStatus =
@@ -57,7 +60,7 @@ export default async function IssueDebatePage({ params, searchParams }: PageProp
 
   return (
     <main className="min-h-screen bg-[#F7F5F0]">
-      <Navbar />
+      <Navbar articleId={from} />
 
       <div className="mx-auto max-w-6xl px-4 pb-24 pt-24 md:px-8 md:pt-32">
         <Link
@@ -81,7 +84,7 @@ export default async function IssueDebatePage({ params, searchParams }: PageProp
 
           <p className="mt-4 max-w-3xl font-serif text-base leading-loose text-[#6C665F] md:text-lg">
             {
-              "\u6e38\u620f\u89c4\u5219\uff1a\u53ef\u4ee5\u7c98\u8d34/\u5220\u9664\u81ea\u5df1\u7684\u7eb8\u6761\u3002\u53ef\u4ee5\u70b9\u8d5e\u4ed6\u4eba\u7eb8\u6761\uff0c\u4e0d\u80fd\u70b9\u8d5e\u81ea\u5df1\u7eb8\u6761\u3002\u9700\u8981\u6ce8\u518c\u767b\u5f55\u540e\u5409\u67b6\u3002"
+              "\u6e38\u620f\u89c4\u5219\uff1a\u53ef\u4ee5\u7c98\u8d34/\u5220\u9664\u81ea\u5df1\u7684\u7eb8\u6761\u3002\u53ef\u4ee5\u70b9\u8d5e\u4ed6\u4eba\u7eb8\u6761\uff0c\u4e0d\u80fd\u70b9\u8d5e\u81ea\u5df1\u7eb8\u6761\u3002"
             }
           </p>
         </header>

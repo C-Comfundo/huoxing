@@ -9,6 +9,7 @@ import { ArrowLeft, Eye, EyeOff, Sparkles } from 'lucide-react'
 
 type AuthMode = 'login' | 'register' | 'forgot'
 const FORGOT_PASSWORD_COOLDOWN_SECONDS = 60
+const FORGOT_PASSWORD_REDIRECT_PATH = '/reset-password-entry'
 
 function getForgotPasswordErrorMessage(message?: string) {
   if (!message) {
@@ -123,7 +124,7 @@ function LoginPageContent() {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${window.location.origin}${FORGOT_PASSWORD_REDIRECT_PATH}`,
     })
 
     if (error) {

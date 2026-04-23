@@ -16,11 +16,24 @@ interface PageProps {
   params: {
     slug: string;
   };
+  searchParams?: {
+    from?: string | string[];
+  };
 }
 
-export default async function IssueDrawingPage({ params }: PageProps) {
+function getReturnAnchor(from: string | string[] | undefined) {
+  return typeof from === "string" && from.trim().length > 0 ? from : null;
+}
+
+export default async function IssueDrawingPage({ params, searchParams }: PageProps) {
   const slug = decodeURIComponent(params.slug);
-  const issue = await getIssueBySlug(slug);
+  const supabase = createClient();
+  const [
+    issue,
+    {
+      data: { user },
+    },
+  ] = await Promise.all([getIssueBySlug(slug), supabase.auth.getUser()]);
 
   if (!issue) {
     notFound();
@@ -32,16 +45,11 @@ export default async function IssueDrawingPage({ params }: PageProps) {
     notFound();
   }
 
-  const supabase = createClient();
-  const [
-    {
-      data: { user },
-    },
-    ...allComments
-  ] = await Promise.all([
-    supabase.auth.getUser(),
-    ...drawings.map((d) => fetchDrawingComments(d.id)),
-  ]);
+  const allComments = await Promise.all(drawings.map((drawing) => fetchDrawingComments(drawing.id)));
+  const returnAnchor = getReturnAnchor(searchParams?.from);
+  const returnHref = returnAnchor
+    ? `/issues/${issue.slug}#${returnAnchor}`
+    : `/issues/${issue.slug}`;
 
   return (
     <main className="min-h-screen bg-[#F7F5F0]">
@@ -53,7 +61,7 @@ export default async function IssueDrawingPage({ params }: PageProps) {
 
       <div className="mx-auto max-w-6xl px-4 pb-24 pt-24 md:px-8 md:pt-32">
         <Link
-          href={`/issues/${issue.slug}`}
+          href={returnHref}
           className="group mb-10 inline-flex items-center text-[#9E9E9E] transition-colors hover:text-[#A1887F]"
         >
           <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />

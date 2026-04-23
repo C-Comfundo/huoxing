@@ -10,5 +10,10 @@
   },
   "images": {
     "binding": "IMAGES"
+  },
+  "vars": {
+    "RESEND_FROM_EMAIL": "星火投稿 <submissions@send.aifnd.top>",
+    "EDITORIAL_SUBMISSIONS_EMAIL": "xinghuohaokan@outlook.com",
+    "NEXT_PUBLIC_APP_URL": "https://xinghuohaokan.com"
   }
 }

@@ -1,5 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Paperclip } from "lucide-react";
 import type { TOCSection } from "@/lib/issue-toc";
+import { getAuthorArticlesSearchHref } from "@/lib/author-search";
+import {
+  getClickedArticleHrefSet,
+  recordClickedArticleHref,
+} from "@/lib/article-click-history";
 import Link from "next/link";
 
 /* ── Visual presets cycled per card ─────────────────────── */
@@ -22,19 +30,27 @@ const NOISE_BG =
 function SectionCard({
   section,
   index,
+  clickedArticleHrefs,
+  onTrackArticleClick,
 }: {
   section: TOCSection;
   index: number;
+  clickedArticleHrefs: Set<string>;
+  onTrackArticleClick: (href: string) => void;
 }) {
   const style = CARD_STYLES[index % CARD_STYLES.length];
   const tapePos =
     index % 2 === 0
       ? "-top-3 left-10 -rotate-3"
       : "-top-3 right-10 rotate-3";
+  
+  // 检查是否为辩题相关的section
+  const isDebateSection = section.displayName.includes("辩题") || section.displayName.includes("以辩会友");
 
   if (section.isStandalone) {
     const cardContent = (
       <div
+        id={isDebateSection ? "debate-end" : undefined} // 添加id
         className={`relative rounded-sm p-6 shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-transform duration-300 hover:-translate-y-1 sm:col-span-2 max-w-lg mx-auto w-full flex justify-center items-center ${style.color} ${style.rotation}`}
       >
         {/* Washi Tape */}
@@ -66,6 +82,7 @@ function SectionCard({
         <Link href={section.customHref} className="block sm:col-span-2 max-w-lg mx-auto w-full">
           {/* We replace the card's external positioning classes with the wrapper ones, but keep inner styles */}
           <div
+            id={isDebateSection ? "debate-end" : undefined} // 添加id
             className={`relative rounded-sm p-6 shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-transform duration-300 hover:-translate-y-1 w-full flex justify-center items-center ${style.color} ${style.rotation}`}
           >
             {/* Washi Tape */}
@@ -99,6 +116,7 @@ function SectionCard({
 
   return (
     <div
+      id={isDebateSection ? "debate-end" : undefined} // 添加id
       className={`relative rounded-sm p-5 sm:p-6 shadow-[0_4px_12px_rgba(0,0,0,0.05),_0_1px_3px_rgba(0,0,0,0.02)] transition-transform duration-300 hover:-translate-y-1 ${style.color} ${style.rotation}`}
     >
       {/* Paper texture */}
@@ -133,46 +151,93 @@ function SectionCard({
       <div className="relative z-10 mt-2">
         <ul className="space-y-0 pl-1">
           {section.items.map((item) => {
-            const innerContent = (
-              <>
-                {/* Desktop: horizontal with dotted line */}
-                <div className="hidden md:flex items-end justify-between gap-3">
-                  <span className="text-[1rem] leading-relaxed text-[#5C4D43] transition-colors duration-200 group-hover/item:text-[#241A14]">
-                    {item.title}
-                  </span>
-                  <span className="flex-1 border-b-2 border-dotted border-[#D7CCC8]/60 mb-[6px] mx-2 min-w-[2rem] group-hover/item:border-[#8D6E63]/40 transition-colors duration-200" />
-                  <span className="flex-shrink-0 text-[0.9rem] tracking-wide text-[#A08979] italic">
-                    {item.author}
-                  </span>
-                </div>
-                {/* Mobile: title on top, author below right-aligned */}
-                <div className="md:hidden">
-                  <span className="text-[0.95rem] leading-relaxed text-[#5C4D43] transition-colors duration-200 group-hover/item:text-[#241A14] block">
-                    {item.title}
-                  </span>
-                  <span className="text-[0.8rem] tracking-wide text-[#A08979] italic block text-right mt-0.5">
-                    —— {item.author}
-                  </span>
-                </div>
-              </>
-            );
+            const itemHref = item.customHref
+              ? item.customHref
+              : item.articleSlug
+                ? `/articles/${item.articleSlug}?articleId=${item.id}`
+                : null;
+            const isArticleHref = Boolean(item.articleSlug && itemHref);
+            const isClicked = isArticleHref && itemHref ? clickedArticleHrefs.has(itemHref) : false;
+            const authorHref = getAuthorArticlesSearchHref(item.author);
+
+            const titleClass =
+              `text-[1rem] leading-relaxed transition-colors duration-200 ${
+                isClicked
+                  ? "text-[#B8B8B8] hover:text-[#A5A5A5]"
+                  : "text-[#5C4D43] group-hover/item:text-[#241A14]"
+              }`;
+            const titleClassMobile =
+              `text-[0.95rem] leading-relaxed transition-colors duration-200 block ${
+                isClicked
+                  ? "text-[#B8B8B8] hover:text-[#A5A5A5]"
+                  : "text-[#5C4D43] group-hover/item:text-[#241A14]"
+              }`;
+
             return (
               <li
                 key={item.id}
                 id={item.id} // 添加 ID 属性
                 className="group/item py-1.5 min-h-[32px]"
               >
-                {item.customHref ? (
-                  <Link href={item.customHref} className="block w-full">
-                    {innerContent}
-                  </Link>
-                ) : item.articleSlug ? (
-                  <Link href={`/articles/${item.articleSlug}?articleId=${item.id}`} className="block w-full">
-                    {innerContent}
-                  </Link>
-                ) : (
-                  <div className="w-full">{innerContent}</div>
-                )}
+                {/* Desktop: title → article, author → search */}
+                <div className="hidden md:flex items-end justify-between gap-3">
+                  {itemHref ? (
+                    <Link
+                      href={itemHref}
+                      className={titleClass}
+                      onClick={() => {
+                        if (isArticleHref) {
+                          onTrackArticleClick(itemHref);
+                        }
+                      }}
+                    >
+                      {item.title}
+                    </Link>
+                  ) : (
+                    <span className={titleClass}>{item.title}</span>
+                  )}
+                  <span className="flex-1 border-b-2 border-dotted border-[#D7CCC8]/60 mb-[6px] mx-2 min-w-[2rem] group-hover/item:border-[#8D6E63]/40 transition-colors duration-200" />
+                  {authorHref ? (
+                    <Link
+                      href={authorHref}
+                      className="flex-shrink-0 text-[0.9rem] tracking-wide text-[#A08979] italic transition-colors hover:text-[#8D6E63]"
+                    >
+                      {item.author}
+                    </Link>
+                  ) : (
+                    <span className="flex-shrink-0 text-[0.9rem] tracking-wide text-[#A08979] italic">
+                      {item.author}
+                    </span>
+                  )}
+                </div>
+                {/* Mobile */}
+                <div className="md:hidden">
+                  {itemHref ? (
+                    <Link
+                      href={itemHref}
+                      className={titleClassMobile}
+                      onClick={() => {
+                        if (isArticleHref) {
+                          onTrackArticleClick(itemHref);
+                        }
+                      }}
+                    >
+                      {item.title}
+                    </Link>
+                  ) : (
+                    <span className={titleClassMobile}>{item.title}</span>
+                  )}
+                  <div className="text-[0.8rem] tracking-wide text-[#A08979] italic block text-right mt-0.5">
+                    ——{" "}
+                    {authorHref ? (
+                      <Link href={authorHref} className="transition-colors hover:text-[#8D6E63]">
+                        {item.author}
+                      </Link>
+                    ) : (
+                      item.author
+                    )}
+                  </div>
+                </div>
               </li>
             );
           })}
@@ -190,6 +255,16 @@ interface IssueTOCProps {
 }
 
 export default function IssueTOC({ sections, issueLabel }: IssueTOCProps) {
+  const [clickedArticleHrefs, setClickedArticleHrefs] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setClickedArticleHrefs(getClickedArticleHrefSet());
+  }, []);
+
+  const handleTrackArticleClick = (href: string) => {
+    setClickedArticleHrefs(recordClickedArticleHref(href));
+  };
+
   if (sections.length === 0) {
     return null;
   }
@@ -253,7 +328,13 @@ export default function IssueTOC({ sections, issueLabel }: IssueTOCProps) {
         {/* Section Cards */}
         <div className="grid gap-6 md:grid-cols-2 mt-8">
           {sections.map((section, i) => (
-            <SectionCard key={section.id} section={section} index={i} />
+            <SectionCard
+              key={section.id}
+              section={section}
+              index={i}
+              clickedArticleHrefs={clickedArticleHrefs}
+              onTrackArticleClick={handleTrackArticleClick}
+            />
           ))}
         </div>
       </div>

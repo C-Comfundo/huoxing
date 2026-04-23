@@ -9,8 +9,6 @@ import SuccessLetterModal from "./success-letter-modal";
 const MAX_FILE_SIZE_BYTES = 4.5 * 1024 * 1024;
 const MAX_FILE_SIZE_LABEL = "4.5MB";
 const ACCEPTED_FILE_TYPES = ".doc,.docx,.txt";
-const SUBMISSION_EMAIL = "xinghuo0308@outlook.com";
-
 const SUCCESS_MODAL_CONTENT = {
   greeting: "您好！",
   paragraphs: [
@@ -25,7 +23,15 @@ const SUCCESS_MODAL_CONTENT = {
   signature: "《星火好看》编辑部 敬上",
 };
 
-export default function SubmissionForm() {
+type SubmissionFormProps = {
+  submissionEmailHref: string;
+  submissionEmailLabel: string;
+};
+
+export default function SubmissionForm({
+  submissionEmailHref,
+  submissionEmailLabel,
+}: SubmissionFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -216,10 +222,10 @@ export default function SubmissionForm() {
           <p className="mt-2 text-sm text-[#8D8D8D]">
             最大 {MAX_FILE_SIZE_LABEL}。如果超过 {MAX_FILE_SIZE_LABEL}，请发送到我们的邮箱：
             <a
-              href={`mailto:${SUBMISSION_EMAIL}`}
+              href={`mailto:${submissionEmailHref}`}
               className="ml-1 text-[#A1887F] transition-colors hover:text-[#8D6E63]"
             >
-              {SUBMISSION_EMAIL}
+              {submissionEmailLabel}
             </a>
           </p>
         </div>
